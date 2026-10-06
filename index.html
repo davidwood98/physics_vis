@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Real-Scale Physics: Interactive Simulations at True 1:1 Size</title>
+  <meta name="description" content="Free physics simulations drawn at true real-world scale on your screen. Calibrate once with a bank card and see what speeds, sizes and motions really look like.">
+  <!-- Replace https://example.com with your domain in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://example.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Real-Scale Physics: simulations at true 1:1 size">
+  <meta property="og:description" content="Interactive physics simulations drawn at real-world scale on your own screen.">
+  <meta property="og:url" content="https://example.com/">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module">
+    import { initPage } from './js/common.js';
+    initPage();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./" aria-current="page">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="hero">
+      <h1>Physics at real 1:1 scale</h1>
+      <p class="lead">Interactive simulations, most drawn at true physical size on your screen. Calibrate once with a bank card, then see what a speed, a distance or a rotation really looks like.</p>
+    </div>
+
+    <section class="sim-section" aria-labelledby="real-world-heading">
+      <!-- Section heading is optional: the grid below doesn't depend on it. -->
+      <h2 id="real-world-heading">Real world 1:1</h2>
+      <ul class="sim-grid">
+        <!-- One <li> per simulation. Copy a block for the next sim. -->
+        <li>
+          <a class="card sim-tile" href="velocity.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <line x1="16" y1="78" x2="150" y2="78" stroke="var(--canvas-track)" stroke-width="2"/>
+              <g stroke="var(--canvas-muted)" stroke-width="1">
+                <line x1="16" y1="82" x2="16" y2="96"/><line x1="43" y1="82" x2="43" y2="90"/>
+                <line x1="70" y1="82" x2="70" y2="90"/><line x1="97" y1="82" x2="97" y2="90"/>
+                <line x1="124" y1="82" x2="124" y2="90"/><line x1="150" y1="82" x2="150" y2="96"/>
+              </g>
+              <rect x="60" y="74" width="42" height="8" rx="4" fill="var(--accent)" opacity="0.25"/>
+              <circle cx="104" cy="78" r="6" fill="var(--accent)"/>
+              <circle cx="228" cy="60" r="38" fill="none" stroke="var(--canvas-track)" stroke-width="2"/>
+              <line x1="228" y1="60" x2="255" y2="33" stroke="var(--canvas-muted)" stroke-width="1.5"/>
+              <circle cx="255" cy="33" r="6" fill="var(--accent)"/>
+              <line x1="258" y1="36" x2="284" y2="62" stroke="var(--canvas-fg)" stroke-width="2"/>
+            </svg>
+            <h3>Velocity</h3>
+            <p>Linear and angular velocity at true size, with v = &omega;r, rpm, km/h and mph.</p>
+            <ul class="tags" aria-label="Topics"><li>Kinematics</li><li>Circular motion</li></ul>
+          </a>
+        </li>
+        <li>
+          <a class="card sim-tile" href="acceleration.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <line x1="14" y1="84" x2="196" y2="84" stroke="var(--canvas-track)" stroke-width="2"/>
+              <g fill="none" stroke="var(--accent)" stroke-width="1.5">
+                <circle cx="22" cy="84" r="4"/><circle cx="30" cy="84" r="4"/><circle cx="46" cy="84" r="4"/>
+                <circle cx="70" cy="84" r="4"/><circle cx="102" cy="84" r="4"/><circle cx="142" cy="84" r="4"/>
+              </g>
+              <circle cx="188" cy="84" r="6" fill="var(--accent)"/>
+              <line x1="188" y1="66" x2="214" y2="66" stroke="var(--canvas-fg)" stroke-width="2"/>
+              <path d="M214 61 L222 66 L214 71 Z" fill="var(--canvas-fg)"/>
+              <line x1="252" y1="14" x2="252" y2="104" stroke="var(--canvas-track)" stroke-width="1" stroke-dasharray="3 4"/>
+              <g opacity="0.25"><circle cx="252" cy="22" r="7" fill="#d62839"/><circle cx="252" cy="38" r="7" fill="#d62839"/></g>
+              <circle cx="247" cy="72" r="7" fill="#d62839"/><circle cx="257" cy="72" r="7" fill="#d62839"/>
+              <ellipse cx="258" cy="62" rx="5" ry="2.2" fill="#2f9e44" transform="rotate(-28 258 62)"/>
+              <line x1="232" y1="106" x2="272" y2="106" stroke="var(--canvas-track)" stroke-width="2"/>
+            </svg>
+            <h3>Acceleration</h3>
+            <p>0 to 60 mph, braking with overshoot, and an apple in free fall at 1&nbsp;g vs the Moon.</p>
+            <ul class="tags" aria-label="Topics"><li>Kinematics</li><li>Gravity</li></ul>
+          </a>
+        </li>
+        <li>
+          <a class="card sim-tile" href="pendulum.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <rect x="128" y="8" width="44" height="5" fill="var(--canvas-fg)"/>
+              <line x1="150" y1="13" x2="150" y2="108" stroke="var(--canvas-track)" stroke-dasharray="3 4"/>
+              <path d="M104 92 A 82 82 0 0 0 196 92" fill="none" stroke="var(--canvas-track)" stroke-width="1.5"/>
+              <line x1="150" y1="13" x2="196" y2="90" stroke="var(--canvas-fg)" stroke-width="1.5"/>
+              <circle cx="196" cy="90" r="10" fill="var(--canvas-muted)"/>
+              <circle cx="193" cy="87" r="3" fill="var(--canvas-bg)" opacity="0.7"/>
+              <g stroke="var(--canvas-muted)" stroke-width="1"><line x1="20" y1="13" x2="32" y2="13"/><line x1="20" y1="40" x2="28" y2="40"/><line x1="20" y1="67" x2="28" y2="67"/><line x1="20" y1="94" x2="32" y2="94"/><line x1="20" y1="13" x2="20" y2="104"/></g>
+            </svg>
+            <h3>Pendulum period</h3>
+            <p>A real-length pendulum up to 40&nbsp;cm: 25&nbsp;cm swings in about 1&nbsp;s, whatever the mass.</p>
+            <ul class="tags" aria-label="Topics"><li>Oscillations</li><li>Gravity</li></ul>
+          </a>
+        </li>
+        <li>
+          <a class="card sim-tile" href="frequency.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <line x1="16" y1="50" x2="284" y2="50" stroke="var(--canvas-track)"/>
+              <path d="M16 50 Q 33 14 50 50 T 84 50 T 118 50 T 152 50 T 186 50 T 220 50 T 254 50 T 284 46" fill="none" stroke="var(--accent)" stroke-width="2"/>
+              <circle cx="104" cy="96" r="14" fill="var(--accent)"/>
+              <circle cx="196" cy="96" r="14" fill="var(--canvas-track)"/>
+              <text x="150" y="100" text-anchor="middle" font-size="11" fill="var(--canvas-muted)">on / off</text>
+            </svg>
+            <h3>Vibration &amp; frequency</h3>
+            <p>From a visible 0.5&nbsp;Hz swing to a 50&nbsp;Hz blur, with true-scale amplitude and a flicker light for timing.</p>
+            <ul class="tags" aria-label="Topics"><li>Waves</li><li>Vibration</li></ul>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="sim-section" aria-labelledby="physics-tools-heading">
+      <!-- Scaled physics tools: not 1:1, no screen calibration needed. Heading is optional. -->
+      <h2 id="physics-tools-heading">Physics tools</h2>
+      <ul class="sim-grid">
+        <li>
+          <a class="card sim-tile" href="projectile.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <line x1="0" y1="104" x2="300" y2="104" stroke="var(--canvas-track)" stroke-width="2"/>
+              <path d="M40 104 Q 150 -20 268 104" fill="none" stroke="var(--canvas-track)" stroke-width="1.5" stroke-dasharray="5 5"/>
+              <path d="M40 104 Q 92 46 132 44" fill="none" stroke="var(--accent)" stroke-width="2"/>
+              <circle cx="134" cy="44" r="6" fill="#c8dc3c" stroke="#6b7a16"/>
+              <g fill="var(--canvas-ref-fill)" stroke="var(--canvas-ref)">
+                <circle cx="24" cy="58" r="6"/><rect x="18" y="65" width="12" height="20" rx="3"/>
+                <rect x="18" y="85" width="5" height="19" rx="2"/><rect x="25" y="85" width="5" height="19" rx="2"/>
+              </g>
+              <text x="268" y="98" text-anchor="end" font-size="11" fill="var(--canvas-muted)">≈ 10 m</text>
+            </svg>
+            <h3>Projectile motion</h3>
+            <p>Throw a ball at any speed and angle and watch the whole flight: range, height and flight time, with a person for scale.</p>
+            <ul class="tags" aria-label="Topics"><li>Kinematics</li><li>Gravity</li></ul>
+          </a>
+        </li>
+        <li>
+          <a class="card sim-tile" href="solar.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <rect x="0" y="0" width="300" height="120" fill="#04060b"/>
+              <g fill="none" stroke="#5b6b86" stroke-width="1">
+                <circle cx="78" cy="54" r="11"/><circle cx="78" cy="54" r="20"/><circle cx="78" cy="54" r="31"/><circle cx="78" cy="54" r="42"/>
+              </g>
+              <circle cx="78" cy="54" r="2.5" fill="#ffcc4d"/>
+              <circle cx="98" cy="54" r="1.5" fill="#4ba3ff"/>
+              <circle cx="98" cy="54" r="6" fill="none" stroke="#4ba3ff" stroke-width="1"/>
+              <g fill="#c3b5ff"><circle cx="206" cy="38" r="1"/><circle cx="231" cy="70" r="1.4"/><circle cx="259" cy="52" r="1"/><circle cx="244" cy="92" r="1"/><circle cx="270" cy="30" r="1"/><circle cx="192" cy="84" r="1"/></g>
+              <circle cx="222" cy="54" r="1" fill="#fff1d6"/>
+              <circle cx="222" cy="54" r="7" fill="none" stroke="#fff1d6" stroke-width="1"/>
+              <circle cx="222" cy="54" r="40" fill="none" stroke="#ffd28a" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+              <text x="222" y="114" text-anchor="middle" font-size="11" fill="#9aa5b8">Milky Way = 1 px</text>
+              <text x="78" y="114" text-anchor="middle" font-size="11" fill="#9aa5b8">Earth = 1 px</text>
+            </svg>
+            <h3>Space at true screen scale</h3>
+            <p>The solar system fitted to your monitor with every known moon, Earth as one pixel with the Sun 11,741 pixels away, then a guided journey out until the whole Milky Way is a single pixel. Click anything for its facts.</p>
+            <ul class="tags" aria-label="Topics"><li>Astrophysics</li><li>Scale</li></ul>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="sim-section" aria-labelledby="tools-heading">
+      <!-- Scaled tools: not 1:1, no screen calibration needed. Heading is optional too. -->
+      <h2 id="tools-heading">Engineering tools</h2>
+      <ul class="sim-grid">
+        <li>
+          <a class="card sim-tile" href="conveyor.html">
+            <svg viewBox="0 0 300 120" aria-hidden="true">
+              <rect x="0" y="80" width="300" height="10" fill="var(--canvas-track)"/>
+              <g fill="var(--accent)">
+                <rect x="14" y="56" width="40" height="24" rx="4"/><rect x="88" y="56" width="40" height="24" rx="4"/>
+                <rect x="162" y="56" width="40" height="24" rx="4"/><rect x="236" y="56" width="40" height="24" rx="4"/>
+              </g>
+              <g stroke="var(--canvas-fg)" stroke-width="1"><line x1="88" y1="40" x2="162" y2="40"/><line x1="88" y1="35" x2="88" y2="45"/><line x1="162" y1="35" x2="162" y2="45"/></g>
+              <text x="125" y="33" text-anchor="middle" font-size="11" fill="var(--canvas-fg)">pitch</text>
+              <text x="150" y="110" text-anchor="middle" font-size="11" fill="var(--canvas-muted)">same rate, faster belt</text>
+            </svg>
+            <h3>Conveyor: speed vs gaps</h3>
+            <p>Products at a fixed rate: speed the belt up and watch the gaps, and the free time at a fixed point, grow.</p>
+            <ul class="tags" aria-label="Topics"><li>Engineering</li><li>Automation</li></ul>
+          </a>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

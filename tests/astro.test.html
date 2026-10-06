@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>astro.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+    h2 { margin-top: 1.5em; font-size: 1.05rem; }
+    code { font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>astro.js tests</h1>
+  <p>Open the console for details. Serve the site root (<code>python -m http.server</code>) and visit /tests/astro.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as A from '../js/astro.js';
+    import { PLANETS } from '../js/data/bodies.js';
+    import { MARKERS, HELIOPAUSE, OORT_CLOUD } from '../js/data/markers.js';
+    import { PIXEL_REFERENCES } from '../js/data/references.js';
+    import { referenceLadder, referenceTypical, storageGet, storageSet, storageRemove } from '../js/common.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+    function section(title) {
+      const h = document.createElement('h2');
+      h.textContent = title;
+      list.append(h);
+    }
+    function check(name, condition, detail = '') {
+      console.assert(condition, name, detail);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}${detail ? `  [${detail}]` : ''}`;
+      list.append(li);
+    }
+    const near = (a, b, rel = 1e-9) => Math.abs(a - b) <= rel * Math.max(1, Math.abs(a), Math.abs(b));
+    const within = (a, b, tol) => Math.abs(a - b) <= tol;
+
+    const [stars, galaxies] = await Promise.all([
+      fetch('../js/data/stars.json').then((r) => r.json()),
+      fetch('../js/data/galaxies.json').then((r) => r.json()),
+    ]);
+    const PPM_24 = 3621; // device px per metre quoted for a 24" 1080p screen
+    const pitchOf = (ppm) => 1 / ppm;
+    const earth = PLANETS.find((p) => p.id === 'earth');
+    const neptune = PLANETS.find((p) => p.id === 'neptune');
+    const galRow = (name) => galaxies.rows.find((r) => r[0] === name);
+    const markerEq = (id) => {
+      const m = MARKERS.find((q) => q.id === id);
+      if (m.catalogue) {
+        const r = galRow(m.catalogue);
+        return A.equatorialVector(r[1], r[2], r[3] * A.MEGAPARSEC);
+      }
+      if (m.sgxyzKms) return A.sgVelocityToEquatorial(m.sgxyzKms, m.H0);
+      const u = m.coord ? A.unitFromCoord(m.coord) : A.lonLatToUnit(A.parseRA(m.ra), A.parseDec(m.dec));
+      return u.map((c) => c * A.distanceFromSpec(m.dist));
+    };
+    const len = (v) => Math.hypot(...v);
+
+    /* ---------------------------------------------------------------- */
+    section('1. Constants, periods, Kepler, scale round trips');
+    const yearDays = A.periodFromLdot(earth.Ldot) / A.DAY;
+    check('Earth period 365.256 d (within 0.1 d)', within(yearDays, 365.256, 0.1), `${yearDays.toFixed(4)} d`);
+    const nepYears = A.periodFromLdot(neptune.Ldot) / A.JULIAN_YEAR;
+    check('Neptune period about 164.8 yr', within(nepYears, 164.8, 0.1), `${nepYears.toFixed(2)} yr`);
+    check('1 AU = 1.495978707e11 m', A.AU === 1.495978707e11);
+    const lightS = A.AU / A.C_LIGHT;
+    check('Sun-Earth light time about 499 s', within(lightS, 499, 0.5), `${lightS.toFixed(2)} s`);
+    let worst = 0;
+    for (const e of [0, 0.0167, 0.2056, 0.5, 0.9, 0.99]) {
+      for (let i = 0; i < 2000; i++) {
+        const M = (i / 2000) * 1e6 * Math.PI - 3e5; // includes huge mean anomalies
+        const E = A.solveKepler(M, e);
+        worst = Math.max(worst, A.keplerResidual(E, e, M));
+      }
+    }
+    check('Kepler residual under 1e-10 (e up to 0.99, |M| up to 1.6e6 rad)', worst < 1e-10, `max ${worst.toExponential(2)}`);
+    for (const ppm of [3621, 18000, 6450]) {
+      const pitch = A.physicalPxPitch(ppm);
+      const mpp = A.EARTH_DIAMETER;
+      const ratio = A.scaleRatio(mpp, pitch);
+      const d = 3.2e15;
+      const sd = A.screenDistance(d, ratio);
+      check(`screenDistance / scaleRatio round trip at ${ppm} px/m`, near(sd * ratio, d) && near(sd, (d / mpp) * pitch), `${sd.toPrecision(6)} m`);
+    }
+
+    /* ---------------------------------------------------------------- */
+    section('2. Distance ladder (A.formatDistance)');
+    const ladder = [
+      [1e-6, /micrometre/], [5e-6, /micrometres/], [1e-12, /× 10⁻¹² m/], [1e-3, /mm/], [1, / m$/], [1e3, /km/], [40075e3, /km/],
+      [384400e3, /times round the Earth/], [A.AU, /Earth–Moon|AU/], [A.LIGHT_YEAR, /light-year/],
+      [2 * A.AU, /AU/], [0.15, /cm/],
+    ];
+    for (const [m, re] of ladder) {
+      const s = A.formatDistance(m);
+      check(`${m} m → "${s}"`, re.test(s) && s.startsWith('about '));
+    }
+    check('travel hint: 30 m → none', A.travelHint(30) === '');
+    check('travel hint: 2 km → on foot', /on foot/.test(A.travelHint(2000)));
+    check('travel hint: 500 km → by car', /by car/.test(A.travelHint(5e5)));
+    check('travel hint: 1e9 m → airliner', /airliner/.test(A.travelHint(1e9)));
+    check('travel hint: 1e14 m (> 1000 years by air) → omitted', A.travelHint(1e14) === '');
+    check('formatWorldLength auto units', /km$/.test(A.formatWorldLength(1.76e5)) && /AU/.test(A.formatWorldLength(3 * A.AU)) &&
+      /million light-years/.test(A.formatWorldLength(3e6 * A.LIGHT_YEAR)) && /billion light-years/.test(A.formatWorldLength(46.5e9 * A.LIGHT_YEAR)),
+      [1.76e5, 3 * A.AU, 3e6 * A.LIGHT_YEAR].map((m) => A.formatWorldLength(m)).join(' | '));
+    check('rateLabel', A.rateLabel(1, '') === 'REAL TIME 1:1' && A.rateLabel(86400, '1 day') === 'TIME ×86,400 (1 day per second)' &&
+      A.rateLabel(1e5 * A.JULIAN_YEAR, '') === 'TIME 100,000 years per second');
+
+    /* ---------------------------------------------------------------- */
+    section('3-4. Earth = 1 pixel');
+    const mppE = A.EARTH_DIAMETER;
+    check('Sun diameter about 109.3 px', within(A.SUN_DIAMETER / mppE, 109.3, 0.05), (A.SUN_DIAMETER / mppE).toFixed(2));
+    check('Sun distance about 11,741 px', within(A.AU / mppE, 11741, 1), (A.AU / mppE).toFixed(1));
+    check('Moon orbit radius about 30.2 px', within(A.EARTH_MOON_DISTANCE / mppE, 30.2, 0.05), (A.EARTH_MOON_DISTANCE / mppE).toFixed(2));
+    check('Moon about 0.27 px', within(3475e3 / mppE, 0.27, 0.005));
+    // Earth's on-screen speed at 1 day/s, averaged over a year (finite differences on the Kepler orbit).
+    let sum = 0;
+    const N = 365;
+    const t0 = A.unixMsToSimSeconds(Date.UTC(2026, 0, 1));
+    for (let i = 0; i < N; i++) {
+      const t = t0 + i * A.DAY;
+      const a = A.planetPosition(earth, t);
+      const b = A.planetPosition(earth, t + 60);
+      sum += Math.hypot(b.x - a.x, b.y - a.y) / 60;
+    }
+    const pxPerS = (sum / N / mppE) * A.DAY;
+    check('At 1 day/s Earth moves about 202 px per second', within(pxPerS, 202, 1.5), `${pxPerS.toFixed(1)} px/s`);
+    check('Real time: about 0.0023 px/s (looks frozen)', within(A.EARTH_ORBITAL_SPEED / mppE, 0.0023, 0.0001));
+    // Moon phase: a new moon at the epoch.
+    const tNew = A.unixMsToSimSeconds(A.NEW_MOON_2000_UNIX_MS);
+    const ePos = A.planetPosition(earth, tNew);
+    const m = A.moonPosition(tNew, ePos);
+    const sunDir = Math.atan2(-ePos.y, -ePos.x);
+    const moonDir = Math.atan2(m.y - ePos.y, m.x - ePos.x);
+    check('Moon is towards the Sun at the 2000-01-06 18:14 UTC new moon', within(A.reduceAngle(moonDir - sunDir), 0, 1e-9));
+
+    /* ---------------------------------------------------------------- */
+    section('5. Solar-system fit, True size');
+    const aph = neptune.a * (1 + neptune.e) * A.AU;
+    const fit = (2 * aph) / (0.94 * 1000); // 1000-device-px shorter side
+    const sunPx = A.SUN_DIAMETER / fit;
+    check('Sun under 1 px at the fit scale', sunPx < 1, `${sunPx.toFixed(3)} px`);
+    check('…drawn with reduced alpha', A.trueSizeAlpha(sunPx) < 0.1 && A.trueSizeAlpha(sunPx) > 0, A.trueSizeAlpha(sunPx).toFixed(4));
+    check('trueSizeAlpha(1) = 1, (0.5) = π/16', A.trueSizeAlpha(1) === 1 && near(A.trueSizeAlpha(0.5), Math.PI / 16));
+
+    /* ---------------------------------------------------------------- */
+    section('6. Milky Way = 1 pixel');
+    const mppMW = A.MILKY_WAY_DIAMETER;
+    check('Sun offset about 0.267 px', within(A.SUN_TO_GALACTIC_CENTRE / mppMW, 0.267, 0.001));
+    const andPx = len(markerEq('andromeda')) / mppMW;
+    check('Andromeda about 25 px', within(andPx, 25, 1), `${andPx.toFixed(2)} px`);
+    check('Observable universe radius about 465,000 px', within(A.OBSERVABLE_UNIVERSE_RADIUS / mppMW, 465000, 500));
+    let clampOk = true;
+    for (const p of [{ x: 1e40, y: -3e39 }, { x: Infinity, y: 0 }, { x: NaN, y: 1 }, { x: 0, y: 0 }, { x: 4.4e26, y: 1e5 }]) {
+      const c = A.clampToRadius(p, A.OBSERVABLE_UNIVERSE_RADIUS);
+      if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || Math.hypot(c.x, c.y) > A.OBSERVABLE_UNIVERSE_RADIUS * (1 + 1e-12)) clampOk = false;
+    }
+    check('Camera clamp: finite, never past the observable universe', clampOk);
+    const c1 = A.clampToRadius({ x: 5e26, y: 0 }, A.OBSERVABLE_UNIVERSE_RADIUS);
+    const c2 = A.clampToRadius({ x: 5e26 + 1e20, y: 0 }, A.OBSERVABLE_UNIVERSE_RADIUS);
+    check('Camera clamp: no jitter at the rim', c1.x === c2.x && c1.y === c2.y);
+
+    /* ---------------------------------------------------------------- */
+    section('7-8. Screen distances and the pixel card at real calibrations');
+    const ratioMW = A.scaleRatio(mppMW, pitchOf(PPM_24));
+    const sd = (m) => A.screenDistance(m, ratioMW);
+    check('Andromeda about 7 mm (24" 1080p)', within(sd(len(markerEq('andromeda'))), 0.007, 0.0006), A.formatDistance(sd(len(markerEq('andromeda')))));
+    check('Virgo Cluster about 15 cm', within(sd(len(markerEq('virgo'))), 0.15, 0.01), A.formatDistance(sd(len(markerEq('virgo')))));
+    const lan = MARKERS.find((q) => q.id === 'laniakea');
+    check('Laniakea diameter about 1.4 m', within(sd(2 * A.distanceFromSpec(lan.radius)), 1.4, 0.06), A.formatDistance(sd(2 * A.distanceFromSpec(lan.radius))));
+    const ratio2 = A.scaleRatio(mppMW, pitchOf(PPM_24 * 2));
+    check('…and they update when the calibration changes (pixels half the size → half the distance)', near(A.screenDistance(1e22, ratio2), sd(1e22) / 2));
+    const p24 = pitchOf(PPM_24);
+    check('Pixel pitch about 0.277 mm', within(p24 * 1e3, 0.277, 0.001), `${(p24 * 1e3).toFixed(4)} mm`);
+    check('About 92 ppi', within(0.0254 / p24, 92, 0.5), (0.0254 / p24).toFixed(1));
+    const lad24 = referenceLadder(p24);
+    check('Closest at 24" 1080p is in the fine-to-medium sand / salt range', referenceTypical(lad24.closest) >= 125e-6 && referenceTypical(lad24.closest) <= 0.71e-3, lad24.closest.name);
+    check('Ladder: 2 smaller + 2 larger around the pitch', lad24.smaller.length === 2 && lad24.larger.length === 2 &&
+      lad24.smaller.every((r) => referenceTypical(r) <= p24) && lad24.larger.every((r) => referenceTypical(r) > p24));
+    for (const mm of [0.05, 0.055, 0.06]) {
+      check(`Phone (${mm} mm/px): closest is a human hair`, referenceLadder(mm / 1000).closest.id === 'hair', referenceLadder(mm / 1000).closest.name);
+    }
+    check('27" 4K (0.155 mm/px): closest is fine sand', referenceLadder(0.155e-3).closest.id === 'finesand', referenceLadder(0.155e-3).closest.name);
+
+    /* ---------------------------------------------------------------- */
+    section('9. Coordinate transforms against catalogued positions');
+    const sgrA = A.equatorialToGalacticDeg(A.parseRA('17 45 40.0'), A.parseDec('-29 00 28'));
+    check('Sgr A* (VizieR: l 359.944199, b −0.046021)', within(sgrA.l, 359.944199, 2e-4) && within(sgrA.b, -0.046021, 2e-4), `${sgrA.l.toFixed(5)}, ${sgrA.b.toFixed(5)}`);
+    const m31 = A.equatorialToGalacticDeg(A.parseRA('00 42 44.3'), A.parseDec('+41 16 09'));
+    check('Andromeda (McConnachie 2012: l 121.2, b −21.6)', within(m31.l, 121.2, 0.06) && within(m31.b, -21.6, 0.06), `${m31.l.toFixed(3)}, ${m31.b.toFixed(3)}`);
+    const lmcRow = galRow('LMC');
+    const lmc = A.equatorialToGalacticDeg(lmcRow[1], lmcRow[2]);
+    check('LMC from galaxies.json (McConnachie 2012: l 280.5, b −32.9)', within(lmc.l, 280.5, 0.06) && within(lmc.b, -32.9, 0.06), `${lmc.l.toFixed(3)}, ${lmc.b.toFixed(3)}`);
+    // Supergalactic coordinates from the RC3 (de Vaucouleurs et al. 1991, VizieR VII/155).
+    for (const [name, ra, dec, sgl, sgb] of [
+      ['M31 (RC3 SGL 336.20, SGB 12.56)', '00 42 44.4', '+41 16 08', 336.2, 12.56],
+      ['M87 (RC3 SGL 102.88, SGB −2.35)', '12 30 49.7', '+12 23 24', 102.88, -2.35],
+      ['M81 (RC3 SGL 41.12, SGB 0.59)', '09 55 33.5', '+69 04 00', 41.12, 0.59],
+    ]) {
+      const g = A.equatorialToGalacticDeg(A.parseRA(ra), A.parseDec(dec));
+      const s = A.galacticToSupergalacticDeg(g.l, g.b);
+      check(`Supergalactic: ${name}`, within(s.sgl, sgl, 0.02) && within(s.sgb, sgb, 0.02), `${s.sgl.toFixed(3)}, ${s.sgb.toFixed(3)}`);
+    }
+    // Matrix route agrees with the formula route, and matrices are orthonormal.
+    const v = A.lonLatToUnit(A.parseRA('00 42 44.3'), A.parseDec('+41 16 09'));
+    const gv = A.unitToLonLat(A.mulMV(A.EQ_TO_GAL, v));
+    check('EQ_TO_GAL matrix matches the spherical formulae', within(gv.lon, m31.l, 1e-9) && within(gv.lat, m31.b, 1e-9));
+    const orth = (M) => [0, 1, 2].every((i) => [0, 1, 2].every((j) => within(M[i][0] * M[j][0] + M[i][1] * M[j][1] + M[i][2] * M[j][2], i === j ? 1 : 0, 1e-12)));
+    check('View matrices are orthonormal (ecliptic, galactic, supergalactic, blends)', [A.VIEW_ECLIPTIC, A.VIEW_GALACTIC, A.VIEW_SUPERGALACTIC, A.blendedView(0.37, 0), A.blendedView(1, 0.6)].every(orth));
+    check('Galactic view: galactic centre is straight up from the Sun', (() => {
+      const gc = A.mulMV(A.VIEW_GALACTIC, A.unitFromCoord({ sys: 'gal', lon: 0, lat: 0 }));
+      return within(gc[0], 0, 1e-12) && within(gc[1], 1, 1e-12);
+    })());
+    const proxima = stars.rows.find((r) => r[0] === 'Proxima Centauri');
+    check('stars.json has Proxima Centauri about 4.24 ly away', proxima && within((proxima[4] * A.PARSEC) / A.LIGHT_YEAR, 4.24, 0.02), proxima && ((proxima[4] * A.PARSEC) / A.LIGHT_YEAR).toFixed(3));
+
+    /* ---------------------------------------------------------------- */
+    section('10. Time accumulation: no jumps, frame-rate independent');
+    const run = (hz, seconds, schedule) => {
+      let t = 0;
+      for (let i = 0; i < hz * seconds; i++) t = A.advanceSimTime(t, 1 / hz, schedule(i / hz));
+      return t;
+    };
+    const schedule = (s) => (s < 2 ? 1 : s < 4 ? A.DAY : A.JULIAN_YEAR); // change rate twice
+    const t60 = run(60, 6, schedule);
+    const t144 = run(144, 6, schedule);
+    check('60 Hz and 144 Hz reach the same sim time', near(t60, t144, 1e-9), `${t60.toExponential(6)} vs ${t144.toExponential(6)}`);
+    check('A 5 s stall advances at most 0.1 s × rate', A.advanceSimTime(0, 5, A.DAY) === 0.1 * A.DAY);
+    check('Changing the rate never moves the clock by itself', A.advanceSimTime(123, 0, 1e13) === 123);
+    check('"Too fast" uses a fixed reference frame time (same at 60 and 144 Hz)', A.REFERENCE_FRAME_DT === 1 / 60);
+
+    /* ---------------------------------------------------------------- */
+    section('11. Storage works with localStorage blocked');
+    const orig = { get: Storage.prototype.getItem, set: Storage.prototype.setItem, rm: Storage.prototype.removeItem };
+    Storage.prototype.getItem = () => { throw new Error('blocked'); };
+    Storage.prototype.setItem = () => { throw new Error('blocked'); };
+    Storage.prototype.removeItem = () => { throw new Error('blocked'); };
+    let storageOk = false;
+    try {
+      storageSet('rsp.test.blocked', '42');
+      storageOk = storageGet('rsp.test.blocked') === '42';
+      storageRemove('rsp.test.blocked');
+    } catch {
+      storageOk = false;
+    }
+    Object.assign(Storage.prototype, { getItem: orig.get, setItem: orig.set, removeItem: orig.rm });
+    check('storageSet/storageGet fall back to memory without throwing', storageOk);
+
+    /* ---------------------------------------------------------------- */
+    section('12. Data files: sources and budget');
+    check('Every reference has a source and a [min, max] range', PIXEL_REFERENCES.every((r) => r.source && r.rangeM[0] < r.rangeM[1] && referenceTypical(r) >= r.rangeM[0] && referenceTypical(r) <= r.rangeM[1]));
+    check('Every marker has a source', MARKERS.every((m) => m.source) && HELIOPAUSE.source && OORT_CLOUD.source);
+    check('stars.json / galaxies.json carry source comments', /HYG/.test(stars._comment) && /McConnachie/.test(galaxies._comment) && /Karachentsev/.test(galaxies._comment));
+    let gz = 0;
+    for (const path of ['stars.json', 'galaxies.json', 'bodies.js', 'markers.js', 'references.js']) {
+      const blob = await fetch(`../js/data/${path}`).then((r) => r.blob());
+      const zipped = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+      gz += zipped.byteLength;
+    }
+    check('All data files together under 300 KB gzipped', gz < 300 * 1024, `${(gz / 1024).toFixed(1)} KB`);
+    check('Galaxy catalogue trimmed to its stated 11 Mpc limit', galaxies.limitMpc === 11 && galaxies.rows.every((r) => r[3] <= 11));
+
+    /* ---------------------------------------------------------------- */
+    section('14. Zoom limits at t = 0 (any screen)');
+    for (const ppm of [3621, 6450, 18000]) {
+      const lim = A.zoomLimits(pitchOf(ppm));
+      const ratio0 = A.scaleRatio(A.metresPerPx(0, lim), pitchOf(ppm));
+      const s0 = (m) => A.screenDistance(m, ratio0);
+      const ok = within(s0(A.EARTH_DIAMETER), 0.02, 1e-12) && within(s0(A.EARTH_MOON_DISTANCE), 0.60, 0.01) &&
+        within(s0(A.SUN_DIAMETER), 2.2, 0.03) && within(s0(A.AU), 235, 1) && within(s0(A.NEPTUNE_A_AU * A.AU), 7060, 30) &&
+        within(s0(A.SUN_TO_GALACTIC_CENTRE) / A.AU, 2.65, 0.01) && within(s0(A.MILKY_WAY_DIAMETER) / A.AU, 9.93, 0.03) &&
+        within(s0(len(markerEq('andromeda'))) / A.AU, 250, 6) && within(s0(A.OBSERVABLE_UNIVERSE_DIAMETER) / A.LIGHT_YEAR, 146, 1);
+      check(`At ${ppm} px/m: Earth 2.00 cm, Moon 60 cm, Sun 2.2 m wide & 235 m away, Neptune 7.1 km, GC 2.65 AU, MW 9.9 AU, Andromeda ~250 AU, universe 146 ly`, ok,
+        [A.EARTH_DIAMETER, A.EARTH_MOON_DISTANCE, A.SUN_DIAMETER, A.AU, A.NEPTUNE_A_AU * A.AU, A.SUN_TO_GALACTIC_CENTRE, A.MILKY_WAY_DIAMETER, len(markerEq('andromeda')), A.OBSERVABLE_UNIVERSE_DIAMETER].map((m) => A.formatDistance(s0(m), { about: false })).join(' | '));
+    }
+    const decades = A.zoomDecades(A.zoomLimits(pitchOf(PPM_24)));
+    check('About 16 powers of ten between the limits (computed)', decades > 15 && decades < 17, decades.toFixed(2));
+
+    /* ---------------------------------------------------------------- */
+    section('15. Scripted sweep through the anchor hand-off and frame switches; huge circles');
+    const lim24 = A.zoomLimits(pitchOf(PPM_24));
+    const earthEq = (t) => A.eclipticToEquatorial(...Object.values(A.planetPosition(earth, t)));
+    const tracked = { sun: () => [0, 0, 0], proxima: () => A.equatorialVector(proxima[2], proxima[3], proxima[4] * A.PARSEC), andromeda: () => markerEq('andromeda'), virgo: () => markerEq('virgo') };
+    for (const hz of [60, 144]) {
+      const steps = 20000; // t from 0 to 1 and back
+      let nan = false;
+      let worstJump = 0;
+      const hist = {};
+      let simT = A.unixMsToSimSeconds(Date.UTC(2026, 9, 6));
+      for (let i = 0; i <= 2 * steps; i++) {
+        const t = i <= steps ? i / steps : 2 - i / steps;
+        simT = A.advanceSimTime(simT, 1 / hz, A.DAY); // time runs at 1 day/s during the sweep
+        const mpp = A.metresPerPx(t, lim24);
+        const fr = A.zoomFrame(mpp, earthEq(simT));
+        for (const [k, fn] of Object.entries(tracked)) {
+          const p = A.frameToPx(fr, fn());
+          if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) nan = true;
+          const h = (hist[k] ||= []);
+          h.push(p);
+          if (h.length > 3) h.shift();
+          if (h.length === 3 && i !== steps && i !== steps + 1) {
+            // Second difference relative to the natural curvature of a log zoom.
+            const d2 = Math.hypot(h[2].x - 2 * h[1].x + h[0].x, h[2].y - 2 * h[1].y + h[0].y);
+            const scale = (Math.hypot(h[1].x, h[1].y) + 1) * (Math.LN10 * decades / steps) ** 2 * 50 + 0.05 + (A.DAY / hz) * 30 / mpp;
+            worstJump = Math.max(worstJump, d2 / scale);
+          }
+        }
+      }
+      check(`Sweep at ${hz} Hz: no NaN`, !nan);
+      check(`Sweep at ${hz} Hz: smooth (second difference under threshold)`, worstJump < 1, `worst ${worstJump.toFixed(3)} of threshold`);
+    }
+    check('Anchor weight: Earth at R >= 300 px, Sun at R <= 30 px, continuous', A.anchorWeight(300) === 0 && A.anchorWeight(30) === 1 && within(A.anchorWeight(299.999), 0, 1e-6) && within(A.anchorWeight(30.0001), 1, 1e-6));
+    const fwN = (px) => A.frameWeights((2 * A.NEPTUNE_A_AU * A.AU) / px).wEG;
+    check('Galactic view once Neptune\'s orbit is under 3 px across', fwN(2.99) === 1 && fwN(31) === 0);
+
+    let clipOk = true;
+    let clipDetail = '';
+    const rect = { x0: 0, y0: 0, x1: 1920, y1: 1080 };
+    for (let e = 3; e <= 12; e++) {
+      const r = 10 ** e;
+      // Circle passing through the screen at an awkward angle.
+      const ang = 0.7 + e * 0.13;
+      const cx = 960 - r * Math.cos(ang);
+      const cy = 540 - r * Math.sin(ang);
+      const iv = A.clipArcToViewport(cx, cy, r, rect);
+      if (iv.length === 0) {
+        clipOk = false;
+        clipDetail = `no interval at 1e${e}`;
+        break;
+      }
+      for (const [a0, a1] of iv) {
+        for (let k = 1; k < 20; k++) {
+          const a = a0 + ((a1 - a0) * k) / 20;
+          const x = cx + r * Math.cos(a);
+          const y = cy + r * Math.sin(a);
+          if (x < -0.01 || x > 1920.01 || y < -0.01 || y > 1080.01) {
+            clipOk = false;
+            clipDetail = `point outside at 1e${e}: ${x}, ${y}`;
+          }
+        }
+      }
+      // A little outside the interval must be off screen.
+      const a = iv[0][0] - (iv[0][1] - iv[0][0]) * 0.05;
+      const x = cx + r * Math.cos(a);
+      const y = cy + r * Math.sin(a);
+      if (x > 0.5 && x < 1919.5 && y > 0.5 && y < 1079.5) {
+        clipOk = false;
+        clipDetail = `interval too short at 1e${e}`;
+      }
+      // Entirely outside / entirely containing the screen.
+      if (A.clipArcToViewport(cx + 3 * r, cy, r, rect).length !== 0) {
+        clipOk = false;
+        clipDetail = `far circle visible at 1e${e}`;
+      }
+      if (A.clipArcToViewport(960, 540, r * 10, rect).length !== 0 && r > 2000) {
+        clipOk = false;
+        clipDetail = `screen inside circle at 1e${e}`;
+      }
+    }
+    check('clipArcToViewport from 1e3 to 1e12 px', clipOk, clipDetail);
+    check('clipArcToViewport: small circle fully inside → [0, 2π]', (() => {
+      const iv = A.clipArcToViewport(500, 500, 100, rect);
+      return iv.length === 1 && within(iv[0][1] - iv[0][0], 2 * Math.PI, 1e-12);
+    })());
+    check('annulusCoverage: inside the hole / inside the shell / outside', A.annulusCoverage(0, 0, 1e9, 2e9, rect) === 'none' &&
+      A.annulusCoverage(-1.5e9, 0, 1e9, 2e9, rect) === 'full' && A.annulusCoverage(-3e9, 0, 1e9, 2e9, rect) === 'none' && A.annulusCoverage(960, 540, 100, 3000, rect) === 'partial');
+
+    /* ---------------------------------------------------------------- */
+    section('16. Wheel zoom about the cursor; limits after recalibration');
+    let worstPx = 0;
+    for (let dec = 0; dec <= Math.floor(decades); dec++) {
+      const mppOld = lim24.near * 10 ** dec;
+      const mppNew = mppOld * 10 ** -0.25;
+      const cam = { x: 1.2345e11 * (dec + 1), y: -9.87e10 };
+      const d = { x: 613.4, y: -287.9 }; // cursor, device px from the centre (y up)
+      const worldBefore = { x: cam.x + d.x * mppOld, y: cam.y + d.y * mppOld };
+      const cam2 = A.zoomAbout(cam, d, mppOld, mppNew);
+      const pxAfter = { x: (worldBefore.x - cam2.x) / mppNew, y: (worldBefore.y - cam2.y) / mppNew };
+      worstPx = Math.max(worstPx, Math.hypot(pxAfter.x - d.x, pxAfter.y - d.y));
+    }
+    check('Point under the cursor stays within 1 px at every decade', worstPx < 1, `${worstPx.toExponential(2)} px`);
+    for (const ppm of [3621, 9000]) {
+      const lim = A.zoomLimits(pitchOf(ppm));
+      const earthCm = (A.EARTH_DIAMETER / A.metresPerPx(0, lim)) * pitchOf(ppm) * 100;
+      const mwPx = A.MILKY_WAY_DIAMETER / A.metresPerPx(1, lim);
+      check(`After calibrating to ${ppm} px/m: t = 0 is "Earth = 2 cm", t = 1 is "Milky Way = 1 px"`, within(earthCm, 2, 1e-12) && mwPx === 1, `${earthCm.toFixed(6)} cm, ${mwPx} px`);
+    }
+    const tKeep = 0.4321;
+    const limA = A.zoomLimits(pitchOf(3621));
+    const limB = A.zoomLimits(pitchOf(5000));
+    check('metresPerPx / tFromMetresPerPx round trip (t is kept across calibrations)', within(A.tFromMetresPerPx(A.metresPerPx(tKeep, limA), limA), tKeep, 1e-12) && within(A.tFromMetresPerPx(A.metresPerPx(tKeep, limB), limB), tKeep, 1e-12));
+    check('Travel duration 1.5 s + 0.6 s per decade, clamped to [3, 14] s', A.travelDuration(0) === 3 && near(A.travelDuration(10), 7.5) && A.travelDuration(30) === 14);
+
+    /* ---------------------------------------------------------------- */
+    section('17. Fast time');
+    const fastRate = 1e5 * A.JULIAN_YEAR;
+    check('At 100,000 years/s every planet is "too fast" (orbit ring only)', PLANETS.every((p) => A.tooFast(A.periodFromLdot(p.Ldot), fastRate)));
+    check('…and the Moon', A.tooFast(27.32 * A.DAY, fastRate));
+    check('At 1 day/s no planet is too fast; at 1 year/s the Moon is', PLANETS.every((p) => !A.tooFast(A.periodFromLdot(p.Ldot), A.DAY)) && A.tooFast(27.32 * A.DAY, A.JULIAN_YEAR));
+    check('Earth reference grid alpha follows the anchor blend (1 − w)', [500, 300, 100, 30, 10].map((R) => 1 - A.anchorWeight(R)).every((a, i, arr) => i === 0 || a <= arr[i - 1]));
+
+    /* ---------------------------------------------------------------- */
+    section('Moons, Milky Way model, rails, galaxy pictures, fact cards');
+    const moons = await fetch('../js/data/moons.json').then((r) => r.json());
+    const moonRow = (name) => moons.rows.find((r) => r[1] === name);
+    const mEl = (row) => A.satelliteElements({ aKm: row[5], e: row[6], wDeg: row[7], mDeg: row[8], iDeg: row[9], nodeDeg: row[10], periodDays: row[11], epoch: row[4] });
+    check('JPL epoch 2000-01-01.5 is J2000 (t = 0)', A.parseEpoch('2000-01-01.5') === 0);
+    const io = mEl(moonRow('Io'));
+    const p0 = A.satelliteOffset(io, 1e8);
+    const p1 = A.satelliteOffset(io, 1e8 + io.period);
+    check('Io returns to the same place after one period', Math.hypot(p1.x - p0.x, p1.y - p0.y) < 1, `${Math.hypot(p1.x - p0.x, p1.y - p0.y).toExponential(2)} m`);
+    check('Io stays about 421,800 km from Jupiter', within(Math.hypot(p0.x, p0.y) / 1e3, 421800, 421800 * 0.01));
+    const tri = mEl(moonRow('Triton'));
+    const a0 = Math.atan2(A.satelliteOffset(tri, 0).y, A.satelliteOffset(tri, 0).x);
+    const a1 = Math.atan2(A.satelliteOffset(tri, A.DAY).y, A.satelliteOffset(tri, A.DAY).x);
+    check('Triton (i > 90°) goes round backwards', tri.retro && A.reduceAngle(a1 - a0) < 0);
+    check('moons.json: 454 moons of Mars to Neptune, sizes only where JPL measured them', moons.rows.length === 454 && moons.rows.every((r) => r[5] > 0 && r[11] > 0) && moons.rows.filter((r) => r[12]).length === 40);
+    const { ARMS, BAR } = await import('../js/data/milkyway.js');
+    check('Arm model: R = R_kink at the kink, and the arms trail (R shrinks as β grows for ψ > 0)', ARMS.every((arm) => within(A.armRadiusKpc(arm, arm.betaKink), arm.rKink, 1e-12)) &&
+      A.armRadiusKpc(ARMS[5], 60) < A.armRadiusKpc(ARMS[5], 40));
+    check('Bar from Wegg et al. 2015: half-length 5 kpc, angle inside (28-33)°', BAR.halfLengthKpc === 5 && BAR.angleDeg >= 28 && BAR.angleDeg <= 33);
+    const L = A.railLengths([5, 6, 6.2, 9, 9]);
+    check('Rail lengths: decades travelled, at least 0.6 per hop, pans count 5', near(L[1], 1) && near(L[2], 1.6) && near(L[3], 4.4) && near(L[4], 9.4));
+    check('Rail position ↔ length round trip', [0, 0.5, 1.25, 2.9, 4].every((s) => within(A.railSFromLength(L, A.railLengthFromS(L, s)), s, 1e-12)));
+    check('Rail animations take twice the go-to time (slower zoom)', near(A.railDuration(10), 2 * A.travelDuration(10)) && A.railDuration(0) === 6);
+    const { galaxyKind } = await import('../js/space-art.js');
+    check('Galaxy pictures from catalogue types', galaxyKind(3, 'Sb') === 'spiral' && galaxyKind(9, 'Irr') === 'irregular' && galaxyKind(-3, 'dSph') === 'dwarf' &&
+      galaxyKind(null, 'cE') === 'elliptical' && galaxyKind(-2, '') === 'lenticular' && galaxyKind(10, 'Ir') === 'irregular' && galaxyKind(null, '') === 'blob' && galaxyKind(4, 'SBbc') === 'barred');
+    const { INFO } = await import('../js/data/info.js');
+    check('Every fact card entry has a source and at least one fact', Object.values(INFO).every((e) => e.source && e.facts.length > 0 && e.desc));
+    check('Fact cards cover the Sun, all planets, the Moon and the major moons', ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'moon', 'io', 'europa', 'ganymede', 'callisto', 'titan', 'triton'].every((k) => INFO[k]));
+    let gz2 = 0;
+    for (const path of ['moons.json', 'info.js', 'milkyway.js']) {
+      const blob = await fetch(`../js/data/${path}`).then((r) => r.blob());
+      gz2 += (await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()).byteLength;
+    }
+    check('All data files including moons, fact cards and the arm model under 300 KB gzipped', gz + gz2 < 300 * 1024, `${((gz + gz2) / 1024).toFixed(1)} KB`);
+
+    /* ---------------------------------------------------------------- */
+    const s = document.getElementById('summary');
+    s.textContent = `${passed} passed, ${failed} failed`;
+    s.className = failed ? 'fail' : 'pass';
+    console.log(`astro tests: ${passed} passed, ${failed} failed`);
+    window.__testResult = { passed, failed };
+  </script>
+</body>
+</html>

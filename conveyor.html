@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conveyor Belt Speed, Gap &amp; Free Time at a Fixed Rate | Real-Scale Physics</title>
+  <meta name="description" content="See how products move along a conveyor at a fixed rate: speed up the belt and the gaps grow, and so does the time a reference point sits empty between products. Live animation, readouts and equations.">
+  <link rel="canonical" href="https://example.com/conveyor.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Conveyor Belt Speed, Gap and Free Time at a Fixed Rate">
+  <meta property="og:description" content="Same products per minute, different belt speeds: watch the gaps and the free time change.">
+  <meta property="og:url" content="https://example.com/conveyor.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/conveyor.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Engineering</p>
+      <h1>Conveyor speed, gaps and free time</h1>
+      <p class="lead">Products arrive at a fixed rate. Run the belt faster and the products spread out: the gap between them grows, and so does the time a fixed point on the belt line sits empty between products, even though the rate hasn't changed.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">Side view of a fixed length of belt, scaled to fit. Speeds and timings are real; product height is illustrative.</p>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Conveyor simulation"></canvas>
+          <span class="time-badge" id="time-badge">REAL TIME</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Pause</button>
+          <fieldset class="segmented segmented--small">
+            <legend class="visually-hidden">Time scale</legend>
+            <input type="radio" name="timescale" id="ts-1" value="1" checked>
+            <label for="ts-1">1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.5" value="0.5">
+            <label for="ts-0.5">0.5&times;</label>
+            <input type="radio" name="timescale" id="ts-0.1" value="0.1">
+            <label for="ts-0.1">0.1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.01" value="0.01">
+            <label for="ts-0.01">0.01&times;</label>
+          </fieldset>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">Press <kbd>Space</kbd> to play or pause. The strip under the belt records the reference point over time: blue while a product is passing it, green while it's empty.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="rate-range">Rate (fixed)</label>
+                <span class="num-field">
+                  <input type="number" id="rate-num" inputmode="numeric" aria-label="Rate, products per minute">
+                  <span class="unit" aria-hidden="true">/min</span>
+                </span>
+              </div>
+              <input type="range" id="rate-range">
+              <div class="range-hint" aria-hidden="true"><span>1/min</span><span>log scale</span><span>1000/min</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="l-range">Product length <var>l</var></label>
+                <span class="num-field">
+                  <input type="number" id="l-num" inputmode="decimal" aria-label="Product length, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="l-range">
+              <div class="range-hint" aria-hidden="true"><span>10 mm</span><span>500 mm</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="v-range">Belt speed <var>v</var></label>
+                <span class="num-field">
+                  <input type="number" id="v-num" inputmode="decimal" aria-label="Belt speed v, metres per second">
+                  <span class="unit" aria-hidden="true">m/s</span>
+                </span>
+              </div>
+              <input type="range" id="v-range">
+              <div class="range-hint" aria-hidden="true"><span id="v-min"></span><span id="v-alt"></span><span>3 m/s</span></div>
+              <p class="control-note muted">The slowest belt speed for this rate and length has the products touching (no gap).</p>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="L-range">Belt length shown</label>
+                <span class="num-field">
+                  <input type="number" id="L-num" inputmode="decimal" aria-label="Belt length shown, metres">
+                  <span class="unit" aria-hidden="true">m</span>
+                </span>
+              </div>
+              <input type="range" id="L-range">
+              <div class="range-hint" aria-hidden="true"><span>0.25 m</span><span>log scale</span><span>20 m</span></div>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout">
+                <dt>One product every</dt>
+                <dd><b data-out="T">–</b> s</dd>
+                <dd class="sub">fixed by the rate</dd>
+              </div>
+              <div class="readout">
+                <dt>Pitch <var>p</var></dt>
+                <dd><b data-out="pitch">–</b> mm</dd>
+                <dd class="sub">centre to centre</dd>
+              </div>
+              <div class="readout">
+                <dt>Gap</dt>
+                <dd><b data-out="gap">–</b> mm</dd>
+              </div>
+              <div class="readout">
+                <dt>Belt speed</dt>
+                <dd><b data-out="mmin">–</b> m/min</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>At the reference point, each cycle</dt>
+                <dd><b data-out="occ">–</b> s occupied · <b data-out="free">–</b> s free</dd>
+                <dd class="sub">empty <span data-out="freePct">–</span>% of the time</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Time to cross the belt shown</dt>
+                <dd><b data-out="cross">–</b> s</dd>
+                <dd class="sub"><span data-out="onBelt">–</span> products on it at once</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col">
+            <div class="presets">
+              <h3>Same rate, different speeds</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="touching">Slowest: products touching</button></li>
+                <li><button type="button" class="btn" data-preset="half">Speed ×½</button></li>
+                <li><button type="button" class="btn" data-preset="double">Speed ×2</button></li>
+              </ul>
+            </div>
+            <div class="presets">
+              <h3>Examples</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="slow">120/min, 100 mm at 0.25 m/s</button></li>
+                <li><button type="button" class="btn" data-preset="fast">120/min, 100 mm at 1 m/s</button></li>
+                <li><button type="button" class="btn" data-preset="bottles">Bottles: 600/min, 65 mm</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Only time and length. Your current values plugged in.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">T = 60 / rate</span>
+          <span class="eq-note" data-eq="T">–</span>
+        </li>
+        <li>
+          <span class="eq">p = v &times; T</span>
+          <span class="eq-note" data-eq="pitch">–</span>
+        </li>
+        <li>
+          <span class="eq">gap = p &minus; l</span>
+          <span class="eq-note" data-eq="gap">–</span>
+        </li>
+        <li>
+          <span class="eq">occupied = l / v</span>
+          <span class="eq-note" data-eq="occ">–</span>
+        </li>
+        <li>
+          <span class="eq">free = gap / v = T &minus; l / v</span>
+          <span class="eq-note" data-eq="free">–</span>
+        </li>
+        <li>
+          <span class="eq">slowest belt: v<sub>min</sub> = l / T</span>
+          <span class="eq-note" data-eq="vmin">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Same rate, different belt speeds</h2>
+
+        <h3>The rate fixes the timing</h3>
+        <p>If products arrive at a fixed rate, one passes any point on the line every <span class="eq-inline">T = 60 / rate</span> seconds, whatever the belt speed. At 120 per minute that's one every 0.5&nbsp;s.</p>
+
+        <h3>The belt speed sets the spacing</h3>
+        <p>In that time the belt moves <span class="eq-inline">v &times; T</span>, so that's the pitch: the distance from one product to the next. A faster belt spreads the same products further apart, and the gap between them is <span class="eq-inline">p &minus; l</span>. Run the belt at exactly <span class="eq-inline">l / T</span> and the gap disappears: the products touch, and that's the slowest the belt can go at this rate.</p>
+
+        <h3>Free time at a fixed point</h3>
+        <p>Watch one spot on the line. Each product covers it for <span class="eq-inline">l / v</span> seconds, then it's empty for <span class="eq-inline">gap / v</span> until the next one arrives. The two always add up to <var>T</var>. Speeding the belt up doesn't change <var>T</var>, but each product passes in less time, so more of every cycle is free.</p>
+        <p>For example, at 120 per minute with 100&nbsp;mm products: at 0.25&nbsp;m/s the pitch is 125&nbsp;mm, the gap 25&nbsp;mm, and the point is free for only 0.1&nbsp;s of each 0.5&nbsp;s. At 1&nbsp;m/s the pitch is 500&nbsp;mm, the gap 400&nbsp;mm, and it's free for 0.4&nbsp;s. Same rate, four times the free time. That's why a faster belt can give a sensor, gate or gripper more time between products, not less.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Conveyor kits and automation books. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <li class="affiliate-placeholder">Affiliate link slot: mini conveyor / automation kit</li>
+            <li class="affiliate-placeholder">Affiliate link slot: material handling handbook</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

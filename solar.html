@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar System &amp; Milky Way at True Screen Scale | Real-Scale Physics</title>
+  <meta name="description" content="A space simulator drawn at true scale on your own screen: the whole solar system fitted to your monitor with every known moon, Earth as one pixel with the Sun 11,741 pixels away, and a guided zoom out to the Milky Way as a single pixel.">
+  <!-- Replace https://example.com with your domain in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://example.com/solar.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Space at true screen scale: Earth = 1 pixel, Milky Way = 1 pixel">
+  <meta property="og:description" content="See how empty space really is: planets, stars and galaxies drawn at true scale on your own calibrated screen.">
+  <meta property="og:url" content="https://example.com/solar.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/solar.js"></script>
+</head>
+<body data-view="system" class="page-space">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Astrophysics</p>
+      <h1>Space at true screen scale</h1>
+      <p class="lead">Fit the whole solar system on your monitor, shrink Earth to a single pixel, then travel out until the entire Milky Way is one pixel. Calibrate your screen once and every distance is real. Click anything with a label for a short fact card.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <fieldset class="segmented" id="view-toggle">
+            <legend class="visually-hidden">View</legend>
+            <input type="radio" name="view" id="view-system" value="system" checked>
+            <label for="view-system">Solar system</label>
+            <input type="radio" name="view" id="view-earth" value="earth">
+            <label for="view-earth">Earth = 1 pixel</label>
+            <input type="radio" name="view" id="view-milkyway" value="milkyway">
+            <label for="view-milkyway">Galactic scale</label>
+          </fieldset>
+
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <button type="button" class="btn btn-small" id="fullscreen-btn" aria-pressed="false">Full screen</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap space-wrap" id="space-wrap">
+          <canvas id="sim-canvas" role="img" tabindex="0" aria-label="Space simulation" aria-describedby="sim-hint"></canvas>
+          <span class="time-badge" id="rate-badge">REAL TIME 1:1</span>
+          <div class="space-hud" id="travel-hud" hidden></div>
+          <div class="space-hud space-hud--pulse" id="pulse-hud" hidden></div>
+          <div class="space-tip" id="space-tip" role="tooltip" hidden></div>
+          <div class="space-card" id="info-card" role="dialog" aria-labelledby="info-title" hidden>
+            <button type="button" class="space-card-close" id="info-close" aria-label="Close the fact card">&times;</button>
+            <h3 id="info-title" data-info="title"></h3>
+            <p class="space-card-sub" data-info="subtitle"></p>
+            <p class="space-card-desc" data-info="desc"></p>
+            <dl class="space-card-facts" data-info="facts"></dl>
+            <p class="space-card-scale" data-info="scale"></p>
+            <p class="space-card-source" data-info="source"></p>
+            <div class="space-card-actions">
+              <button type="button" class="btn btn-small" id="info-pin">Pin to equivalents</button>
+              <button type="button" class="btn btn-small" id="info-focus" hidden>Zoom in on it</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="zoom-row" data-view-only="system">
+          <button type="button" class="btn btn-icon" id="sys-zoom-in" aria-label="Zoom in on the focus" aria-keyshortcuts="+">+</button>
+          <span class="zoom-end">Close-up</span>
+          <input type="range" id="sys-range" min="0" max="1000" step="1" value="1000" aria-label="Zoom, from a close-up of the focus body to the whole solar system">
+          <span class="zoom-end">Whole solar system</span>
+          <button type="button" class="btn btn-icon" id="sys-zoom-out" aria-label="Zoom out" aria-keyshortcuts="-">&minus;</button>
+          <label class="select-label">
+            <span>Zoom focus</span>
+            <select id="focus-select"></select>
+          </label>
+          <button type="button" class="btn btn-small" id="sys-reset">Whole solar system</button>
+        </div>
+
+        <div class="zoom-row" data-view-only="milkyway">
+          <button type="button" class="btn btn-icon" id="rail-in" aria-label="Zoom in to the previous place" aria-keyshortcuts="+">+</button>
+          <span class="zoom-end">Earth 2&nbsp;cm</span>
+          <input type="range" id="rail-range" min="0" max="1000" step="1" value="1000" aria-label="Position along the journey, from Earth 2 cm across to the Milky Way as 1 pixel and the clusters beyond">
+          <span class="zoom-end">Milky Way 1&nbsp;px &amp; beyond</span>
+          <button type="button" class="btn btn-icon" id="rail-out" aria-label="Zoom out to the next place" aria-keyshortcuts="-">&minus;</button>
+        </div>
+        <div class="rail-stops" id="rail-stops" data-view-only="milkyway" role="group" aria-label="Places to visit">
+          <span class="muted small">Places to visit:</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Pause</button>
+
+          <fieldset class="segmented segmented--small rate-group" id="rate-group">
+            <legend class="visually-hidden">Time rate</legend>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-real" value="real" checked><label for="rate-real">Real time</label></span>
+            <span class="seg-item" data-view-only="earth milkyway"><input type="radio" name="rate" id="rate-min" value="min"><label for="rate-min">1 min/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-hour" value="hour"><label for="rate-hour">1 hour/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-day" value="day"><label for="rate-day">1 day/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-week" value="week"><label for="rate-week">1 week/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-month" value="month"><label for="rate-month">1 month/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-year" value="year"><label for="rate-year">1 year/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-10y" value="10y"><label for="rate-10y">10 years/s</label></span>
+            <span class="seg-item" data-view-only="milkyway"><input type="radio" name="rate" id="rate-1ky" value="1ky"><label for="rate-1ky">1,000 yr/s</label></span>
+            <span class="seg-item" data-view-only="milkyway"><input type="radio" name="rate" id="rate-10ky" value="10ky"><label for="rate-10ky">10,000 yr/s</label></span>
+            <span class="seg-item" data-view-only="milkyway"><input type="radio" name="rate" id="rate-100ky" value="100ky"><label for="rate-100ky">100,000 yr/s</label></span>
+            <span class="seg-item" data-view-only="milkyway"><input type="radio" name="rate" id="rate-1my" value="1my"><label for="rate-1my">1,000,000 yr/s</label></span>
+          </fieldset>
+        </div>
+
+        <div class="sim-controls">
+          <fieldset class="segmented segmented--small" id="mode-toggle" aria-describedby="mode-caption">
+            <legend class="visually-hidden">Draw mode</legend>
+            <input type="radio" name="drawmode" id="mode-markers" value="markers" checked>
+            <label for="mode-markers">Markers</label>
+            <input type="radio" name="drawmode" id="mode-true" value="true">
+            <label for="mode-true">True size</label>
+          </fieldset>
+
+          <button type="button" class="btn btn-small" id="recentre-btn" data-view-only="earth">Recentre</button>
+          <button type="button" class="btn btn-small" id="fly-sun-btn" data-view-only="earth">Fly to the Sun</button>
+          <button type="button" class="btn btn-small" id="fly-mars-btn" data-view-only="earth">Fly to Mars</button>
+          <button type="button" class="btn btn-small" id="back-earth-btn" data-view-only="earth">Back to Earth</button>
+          <button type="button" class="btn btn-small" id="pulse-btn" data-view-only="earth milkyway" aria-pressed="false">Light pulse</button>
+          <button type="button" class="btn btn-small" id="follow-pulse-btn" data-view-only="earth" aria-pressed="false">Follow the pulse</button>
+
+        </div>
+
+        <p class="sim-hint muted" id="mode-caption"></p>
+        <p class="sim-hint muted" id="sim-hint">
+          <span data-view-only="system">The scale is set by your screen: Neptune's whole orbit is fitted to the canvas, so the bigger the canvas the bigger everything is drawn. Use <strong>Full screen</strong> and the solar system spans your whole monitor (1 px = <span data-calc="fsPx">–</span> on this screen). Scroll, pinch or use <kbd>+</kbd>/<kbd>&minus;</kbd> to zoom; click a planet or moon to make it the zoom focus (the Sun otherwise).</span>
+          <span data-view-only="earth">Earth is exactly one pixel. Drag or use the arrow keys to pan; the arrow at the edge points to the Sun. Fly to the Sun or Mars, or send a light pulse and follow it.</span>
+          <span data-view-only="milkyway">A guided journey: pick a place to visit, or step between places with <kbd>+</kbd>/<kbd>&minus;</kbd>, the arrow keys or the scroll wheel. The Milky Way and galaxies are static at these scales: they barely move in a human lifetime.</span>
+          Press <kbd>Space</kbd> to play or pause. Hover anything for how far away it would be from your screen, or click a label for a fact card. Background stars are decorative.
+        </p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="readouts-heading">
+        <h2 id="readouts-heading" class="visually-hidden">Readouts and scale equivalents</h2>
+        <div class="controls-grid space-grid">
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>Scale</dt>
+                <dd><b data-out="pxIs">–</b></dd>
+                <dd class="sub" data-out="scaleSub">–</dd>
+              </div>
+
+              <div class="readout" data-view-only="system">
+                <dt>Sun diameter</dt>
+                <dd><b data-out="sunPx">–</b> px</dd>
+              </div>
+              <div class="readout" data-view-only="system">
+                <dt>Earth diameter</dt>
+                <dd><b data-out="earthPx">–</b> px</dd>
+              </div>
+              <div class="readout" data-view-only="system">
+                <dt>Canvas width</dt>
+                <dd><b data-out="canvasAu">–</b> AU</dd>
+              </div>
+              <div class="readout" data-view-only="system">
+                <dt>Zoom focus</dt>
+                <dd><b data-out="sysFocus">–</b></dd>
+                <dd class="sub">click a body to change it</dd>
+              </div>
+              <div class="readout" data-view-only="system">
+                <dt>Whole system in full screen</dt>
+                <dd><b data-out="fsScale">–</b></dd>
+                <dd class="sub">the scale is set by your screen size</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="system">
+                <dt>If this canvas were the solar system…</dt>
+                <dd data-out="proximaLine">–</dd>
+              </div>
+
+              <div class="readout" data-view-only="earth">
+                <dt>Earth's speed on screen</dt>
+                <dd><b data-out="earthPxS">–</b> px/s</dd>
+                <dd class="sub" data-out="earthPxSSub">–</dd>
+              </div>
+              <div class="readout" data-view-only="earth">
+                <dt>Orbital speed</dt>
+                <dd><b data-out="earthKms">–</b> km/s</dd>
+                <dd class="sub">mean 29.78 km/s</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="earth">
+                <dt>Distance to the Sun</dt>
+                <dd><b data-out="sunDistPx">–</b> px</dd>
+                <dd class="sub" data-out="sunDistSub">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="earth">
+                <dt>Distance to Mars</dt>
+                <dd><b data-out="marsDist">–</b></dd>
+                <dd class="sub" data-out="marsSub">–</dd>
+              </div>
+
+              <div class="readout" data-view-only="milkyway">
+                <dt>Zoom level</dt>
+                <dd><b data-out="zoomPow">–</b></dd>
+                <dd class="sub" data-out="zoomSub">–</dd>
+              </div>
+              <div class="readout" data-view-only="milkyway">
+                <dt>Canvas spans</dt>
+                <dd><b data-out="spanW">–</b></dd>
+                <dd class="sub" data-out="spanH">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="milkyway">
+                <dt>Apparent sizes on your screen</dt>
+                <dd data-out="appEarth">–</dd>
+                <dd data-out="appSun">–</dd>
+                <dd data-out="appMw">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="earth milkyway">
+                <dt>Camera offset</dt>
+                <dd data-out="camOff">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="milkyway">
+                <dt>Nearest catalogued object to the centre</dt>
+                <dd data-out="nearest">–</dd>
+                <dd class="sub" data-out="emptiness">–</dd>
+              </div>
+              <div class="readout" data-view-only="milkyway">
+                <dt>Galaxies on screen</dt>
+                <dd><b data-out="galCount">–</b></dd>
+                <dd class="sub">of the catalogue</dd>
+              </div>
+              <div class="readout" data-view-only="milkyway">
+                <dt>View</dt>
+                <dd><b data-out="frame">–</b></dd>
+                <dd class="sub" data-out="frameSub">–</dd>
+              </div>
+            </dl>
+            <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+          </div>
+
+          <div class="controls-col">
+            <details class="equiv" id="equiv" open>
+              <summary><h3 class="readouts-title">Scale equivalents</h3></summary>
+              <p class="equiv-span">Your screen width spans <b data-out="screenSpan">–</b>; 1 px = <b data-out="pxWorld">–</b>.</p>
+              <div class="equiv-pick">
+                <label for="pick-select">Pick an object</label>
+                <select id="pick-select"></select>
+                <button type="button" class="btn btn-small" id="pin-btn">Pin</button>
+                <button type="button" class="btn btn-small" id="pick-info">Facts</button>
+              </div>
+              <p class="equiv-picked" id="pick-out" aria-live="polite"></p>
+              <ul class="equiv-list" id="equiv-pinned" aria-label="Pinned objects"></ul>
+              <ul class="equiv-list" id="equiv-fixed" aria-label="Distances at this scale"></ul>
+              <p class="muted small equiv-note">Distances are measured from Earth (you), at the current scale. Travel times use walking at 1.4&nbsp;m/s, driving at 70&nbsp;mph and an airliner at 250&nbsp;m/s.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card pixel-card" id="pixel-card"></section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">How big is space on your screen?</h2>
+
+        <h3>The Sun is a fraction of a pixel</h3>
+        <p>Squeeze Neptune's whole orbit onto your screen and each pixel has to cover <span data-calc="fitPx">millions of kilometres</span> (the exact figure depends on your canvas: in full screen it is <span data-calc="fsPx">–</span>). The Sun is <span data-calc="sunMkm">1.39 million km</span> across, so it shrinks to about <span data-calc="sunFitPx">a fifth of a pixel</span>, and Earth to about <span data-calc="earthFitPx">a thousandth</span>. The planets you usually see in diagrams are drawn hundreds of times too big. Only the orbits are to scale. Zoom in on any planet to see its moons: all <span data-calc="moonCount">454</span> moons of Mars, Jupiter, Saturn, Uranus and Neptune in JPL's list are drawn, most of them small captured rocks with no measured size.</p>
+
+        <h3>Earth as one pixel</h3>
+        <p>Make Earth exactly one pixel and the Sun becomes a disc about <span data-calc="sunEarthPx">109</span> pixels wide, <span data-calc="sunDistEarthPx">11,741</span> pixels away: over <span data-calc="screenWidths">6</span> widths of a 1920-pixel screen. The Moon sits about <span data-calc="moonPx">30</span> pixels from Earth. Light from the Sun takes about <span data-calc="lightSec">499</span> seconds to cross that gap, and Earth itself, racing along its orbit at about 29.78&nbsp;km/s, creeps across your screen at only <span data-calc="earthCreep">0.0023</span> pixels per second.</p>
+
+        <h3>The galactic scale, and the Milky Way as one pixel</h3>
+        <p>Shrink our galaxy, about 100,000 light-years across, to a single pixel and the Sun sits about <span data-calc="sunMwPx">0.27</span> pixels from its centre. Andromeda, about 2.5 million light-years away, is roughly <span data-calc="andPx">25</span> pixels away: <span data-calc="andMm">7 mm</span> on a 24-inch 1080p monitor. Most of the screen is empty of drawn objects. That is because the galaxy catalogue stops at <span data-calc="limitPx">359</span> pixels (11 megaparsecs), not because space does: beyond it there are countless more galaxies that simply aren't drawn here. The journey stops at places along the way; galaxies big enough to see are drawn as artist's impressions of their catalogued type, and the Milky Way picture follows the measured spiral arms of Reid et al. (2019) and the bar of Wegg et al. (2015).</p>
+
+        <h3>Markers or true size?</h3>
+        <p>In <strong>Markers</strong> mode, anything smaller than a few pixels gets a labelled ring so you can find it. <strong>True size</strong> draws everything at its real size; anything under a pixel becomes a single pixel whose brightness is the fraction of the pixel it would cover, so the Sun in the solar-system view is a barely visible dot.</p>
+
+        <h3>What is approximate</h3>
+        <p>Planet positions come from approximate J2000 orbital elements and are drawn flat (inclinations ignored), so they can be off by a few degrees; they are for visualisation only. The Moon is on a circular orbit timed from the mean new moon of 6 January 2000. Moon orbits are flat versions of JPL's mean orbits. The Milky Way picture uses a measured arm model but its colours are artistic, galaxy pictures are impressions, the background stars are decorative, and distances beyond about 100 million light-years come from redshifts.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Telescopes, star atlases and astronomy books. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: star atlas</li>
+            <li class="affiliate-placeholder">Affiliate link slot: astronomy book</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Data sources</h2>
+      <ul class="small">
+        <li>Nearest stars: <a href="https://github.com/astronexus/HYG-Database">HYG database v4.1</a> by David Nash (astronexus.com), licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>; the derived file <code>js/data/stars.json</code> is shared under the same licence.</li>
+        <li>Galaxies: McConnachie (2012), AJ 144, 4, and Karachentsev, Makarov &amp; Kaisina (2013), AJ 145, 101, retrieved through the <a href="https://vizier.cds.unistra.fr/">VizieR catalogue access tool, CDS, Strasbourg, France</a>.</li>
+        <li>Planet orbits: JPL Solar System Dynamics, <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">Approximate Positions of the Planets</a> (E.M. Standish). Planet and Moon diameters: <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/">NASA Planetary Fact Sheet</a>. Moons of the other planets: JPL <a href="https://ssd.jpl.nasa.gov/sats/elem/">Planetary Satellite Mean Elements</a> and <a href="https://ssd.jpl.nasa.gov/sats/phys_par/">Physical Parameters</a>.</li>
+        <li>Milky Way picture: spiral arms from Reid et al. (2019), ApJ 885, 131; long bar from Wegg, Gerhard &amp; Portail (2015), MNRAS 450, 4050.</li>
+        <li>Fact cards: NASA Science and NSSDC fact sheets, ESA/Hubble, ESA/Webb, ESO, Chandra, NRAO and the papers named on each card (each card shows its source).</li>
+        <li>Structures: heliopause (Burlaga et al. 2019; Stone et al. 2013), Oort cloud (NASA Science), Local Group (McConnachie 2012), M81 group (Karachentsev 2005), Centaurus A group (Karachentsev et al. 2007), Virgo Cluster (Mei et al. 2007), Great Attractor (Lynden-Bell et al. 1988), Coma Cluster (Carter et al. 2008), Laniakea (Tully et al. 2014); positions of M81, NGC 5128, M87 and Abell 1656 from <a href="https://simbad.cds.unistra.fr/simbad/">SIMBAD</a>.</li>
+        <li>Pixel-size objects: sources listed in <code>js/data/references.js</code> (hover an item in the Pixel size card to see its source).</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking. Star data: HYG database (CC BY-SA 4.0). Galaxy data via VizieR, CDS, Strasbourg.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

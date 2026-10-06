@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pendulum Period Simulator at Real 1:1 Scale | Real-Scale Physics</title>
+  <meta name="description" content="A real-length pendulum drawn at true 1:1 scale on your screen. Hold up a string and weight and watch them match: a 25 cm pendulum swings in about 1 s, a 1 m pendulum in about 2 s, whatever the mass.">
+  <link rel="canonical" href="https://example.com/pendulum.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Pendulum Period Simulator at Real 1:1 Scale">
+  <meta property="og:description" content="A true-length pendulum on your screen: the period depends only on length.">
+  <meta property="og:url" content="https://example.com/pendulum.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/pendulum.js"></script>
+</head>
+<body class="layout-tall">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Oscillations</p>
+      <h1>Pendulum period at real 1:1 scale</h1>
+      <p class="lead">A real-length pendulum on your screen. Hang a string with a small weight next to it and they swing together. The period depends on the length, not the mass.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <label class="select-label">
+            <span>View</span>
+            <select id="view-mode">
+              <option value="true">True scale 1:1</option>
+              <option value="fit">Fit to screen</option>
+            </select>
+          </label>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Pendulum simulation"></canvas>
+          <span class="time-badge" id="time-badge">REAL TIME 1:1</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Pause</button>
+          <button type="button" class="btn" id="release-btn">Release again</button>
+          <fieldset class="segmented segmented--small">
+            <legend class="visually-hidden">Time scale</legend>
+            <input type="radio" name="timescale" id="ts-1" value="1" checked>
+            <label for="ts-1">1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.5" value="0.5">
+            <label for="ts-0.5">0.5&times;</label>
+            <input type="radio" name="timescale" id="ts-0.1" value="0.1">
+            <label for="ts-0.1">0.1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.01" value="0.01">
+            <label for="ts-0.01">0.01&times;</label>
+          </fieldset>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">Press <kbd>Space</kbd> to play or pause. The marker at the bottom flashes each time the bob passes through the middle. The bob is drawn as a steel ball of the chosen mass, at true size.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="L-range">Length <var>L</var></label>
+                <span class="num-field">
+                  <input type="number" id="L-num" inputmode="decimal" aria-label="Length L, centimetres">
+                  <span class="unit" aria-hidden="true">cm</span>
+                </span>
+              </div>
+              <input type="range" id="L-range">
+              <div class="range-hint" aria-hidden="true"><span>5 cm</span><span>40 cm</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="th-range">Release angle <var>&theta;</var><sub>0</sub></label>
+                <span class="num-field">
+                  <input type="number" id="th-num" inputmode="decimal" aria-label="Release angle, degrees">
+                  <span class="unit" aria-hidden="true">°</span>
+                </span>
+              </div>
+              <input type="range" id="th-range">
+              <div class="range-hint" aria-hidden="true"><span>1°</span><span>80°</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="m-range">Mass <var>m</var></label>
+                <span class="num-field">
+                  <input type="number" id="m-num" inputmode="decimal" aria-label="Mass m, grams">
+                  <span class="unit" aria-hidden="true">g</span>
+                </span>
+              </div>
+              <input type="range" id="m-range">
+              <div class="range-hint" aria-hidden="true"><span>10 g</span><span id="m-alt"></span><span>1000 g</span></div>
+            </div>
+
+            <div class="control-row">
+              <label for="damping-select">Air damping</label>
+              <select id="damping-select">
+                <option value="off">Off (ideal)</option>
+                <option value="light">Light</option>
+                <option value="strong">Strong</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout">
+                <dt>Period, small angle <var>T</var><sub>0</sub></dt>
+                <dd><b data-out="T0">–</b> s</dd>
+              </div>
+              <div class="readout">
+                <dt>Period at this angle</dt>
+                <dd><b data-out="T">–</b> s</dd>
+                <dd class="sub" data-out="Tpct">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Measured period</dt>
+                <dd><b data-out="Tm">–</b> s</dd>
+                <dd class="sub">from the simulation</dd>
+              </div>
+              <div class="readout">
+                <dt>Frequency <var>f</var></dt>
+                <dd><b data-out="f">–</b> Hz</dd>
+                <dd class="sub"><span data-out="bpm">–</span> swings/min</dd>
+              </div>
+              <div class="readout">
+                <dt>Top speed (at the bottom)</dt>
+                <dd><b data-out="vmax">–</b> m/s</dd>
+              </div>
+              <div class="readout">
+                <dt>Angle now</dt>
+                <dd><b data-out="angle">–</b>°</dd>
+                <dd class="sub"><span data-out="swings">0</span> passes through the middle</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Damping</dt>
+                <dd><b data-out="halflife">–</b></dd>
+              </div>
+            </dl>
+            <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+          </div>
+
+          <div class="controls-col">
+            <div class="presets">
+              <h3>Presets</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="tenth">10 cm (≈ 0.63 s)</button></li>
+                <li><button type="button" class="btn" data-preset="quarter">25 cm (≈ 1 s)</button></li>
+                <li><button type="button" class="btn" data-preset="forty">40 cm (≈ 1.27 s)</button></li>
+                <li><button type="button" class="btn" data-preset="wide">Wide swing (60°)</button></li>
+                <li><button type="button" class="btn" data-preset="heavy">Same length, 10× mass</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">With your current values plugged in (g = 9.81 m/s²).</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">T<sub>0</sub> = 2&pi; &radic;(L / g)</span>
+          <span class="eq-note" data-eq="T0">–</span>
+        </li>
+        <li>
+          <span class="eq">T &asymp; T<sub>0</sub> (1 + &theta;<sub>0</sub><sup>2</sup>/16)</span>
+          <span class="eq-note" data-eq="T">–</span>
+        </li>
+        <li>
+          <span class="eq">L = g (T / 2&pi;)<sup>2</sup></span>
+          <span class="eq-note" data-eq="Lfor">–</span>
+        </li>
+        <li>
+          <span class="eq">v<sub>max</sub> = &radic;(2 g L (1 &minus; cos &theta;<sub>0</sub>))</span>
+          <span class="eq-note" data-eq="v">–</span>
+        </li>
+        <li>
+          <span class="eq">&theta;&Prime; = &minus;(g / L) sin &theta; &minus; (b / m) &theta;&prime;</span>
+          <span class="eq-note">The equation the simulation solves (b = air damping). Mass only appears in the damping term.</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Why a pendulum's period depends only on length</h2>
+
+        <h3>The period</h3>
+        <p>For small swings, a pendulum of length <var>L</var> (pivot to the centre of the bob) has a period <span class="eq-inline">T = 2&pi; &radic;(L / g)</span>. A 25&nbsp;cm pendulum swings back and forth in about 1.00&nbsp;s. Because of the square root, you need four times the length to double the period: 10&nbsp;cm takes 0.63&nbsp;s and 40&nbsp;cm takes 1.27&nbsp;s (and a 1&nbsp;m pendulum about 2&nbsp;s).</p>
+
+        <h3>Why mass doesn't matter</h3>
+        <p>A heavier bob feels a bigger pull from gravity, but it is also harder to accelerate by exactly the same factor, so the two cancel. That's the same reason a heavy and a light ball fall together. Try the mass slider: the period doesn't change. Mass only matters once air resistance is included, and then a heavier bob keeps swinging for longer.</p>
+
+        <h3>Big swings are a little slower</h3>
+        <p>The simple formula assumes small angles. At 20&deg; the real period is about 0.8% longer, and at 60&deg; about 7% longer. The simulation solves the full equation, so its measured period matches the "period at this angle" readout.</p>
+
+        <h3>Why real pendulums slow down, and why clocks have weights</h3>
+        <p>A real pendulum loses a little energy on every swing. Air pushes back on the moving bob (drag) and the pivot rubs, and both turn some of the swing's energy into heat. With less energy the bob can't climb as high, so each swing gets a little smaller until it stops. Turn on air damping to see this. A heavier bob of the same size keeps going for longer, because the same drag takes a smaller share of its larger store of energy. A pendulum clock solves the problem with a weight on a chain (or a wound spring). As the weight slowly falls, the clock's escapement gives the pendulum a tiny push each swing, just enough to replace what drag and friction took. Because the period depends on length and hardly at all on swing size, these pushes keep it going without changing the time it keeps.</p>
+
+        <h3>Check it against a real one</h3>
+        <p>Calibrate the screen, tie a small weight to a thread and measure the length from your fingers to the middle of the weight (up to 40&nbsp;cm). Set the same length, hold your fingers at the drawn pivot and release together. The view grows down the page to fit the whole pendulum at true size, so scroll down to follow a long one.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Pendulum kits and books on oscillations. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <li class="affiliate-placeholder">Affiliate link slot: pendulum / bob set</li>
+            <li class="affiliate-placeholder">Affiliate link slot: oscillations textbook</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

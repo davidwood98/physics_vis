@@ -1,0 +1,659 @@
+/* ==========================================================================
+   Real-Scale Physics: shared styles
+   Theme lives in CSS variables; the canvas reads the --canvas-* and
+   --accent* variables at runtime, so it follows light/dark mode too.
+   ========================================================================== */
+
+:root {
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-math: Cambria, Georgia, "Times New Roman", serif;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f2f4f7;
+  --border: #e2e5ea;
+  --border-strong: #b9c0ca;
+  --text: #15181d;
+  --muted: #586170;
+  --accent: #2563eb;
+  --accent-rgb: 37, 99, 235;      /* same colour as r, g, b for canvas alpha */
+  --accent-contrast: #ffffff;
+  --accent-soft: #e7eefe;
+  --warn-bg: #fff3dc;
+  --warn-fg: #7a4300;
+  --ok-bg: #e3f5ea;
+  --ok-fg: #14603a;
+
+  --canvas-bg: #fbfcfd;
+  --canvas-fg: #1b2129;
+  --canvas-muted: #5a6371;
+  --canvas-track: #b4bcc8;
+  --canvas-ref: #b45309;
+  --canvas-ref-fill: rgba(245, 158, 11, 0.14);
+  --canvas-warn: #8a4500;
+  --canvas-warn-bg: #fff1d6;
+  --canvas-ok: #14603a;
+  --canvas-ok-bg: #e3f5ea;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --gap: 16px;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1115;
+    --surface: #161a20;
+    --surface-2: #1d222a;
+    --border: #2a313b;
+    --border-strong: #4a5462;
+    --text: #e7eaef;
+    --muted: #9ba5b3;
+    --accent: #6ea8ff;
+    --accent-rgb: 110, 168, 255;
+    --accent-contrast: #0b1220;
+    --accent-soft: #1a2944;
+    --warn-bg: #3a2a0c;
+    --warn-fg: #ffd28a;
+    --ok-bg: #0f3321;
+    --ok-fg: #8fe0b2;
+
+    --canvas-bg: #12161b;
+    --canvas-fg: #e7eaef;
+    --canvas-muted: #9ba5b3;
+    --canvas-track: #46505d;
+    --canvas-ref: #fbbf24;
+    --canvas-ref-fill: rgba(251, 191, 36, 0.12);
+    --canvas-warn: #ffd28a;
+    --canvas-warn-bg: #3a2a0c;
+    --canvas-ok: #8fe0b2;
+    --canvas-ok-bg: #0f3321;
+  }
+}
+
+/* ---------- Base ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: hidden;
+  /* keep the footer at the bottom on short pages */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main { flex: 1 0 auto; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 0.5em; }
+h1 { font-size: clamp(1.75rem, 1.3rem + 2vw, 2.5rem); letter-spacing: -0.02em; }
+h2 { font-size: 1.35rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; }
+p { margin: 0 0 1em; }
+a { color: var(--accent); text-underline-offset: 2px; }
+var { font-family: var(--font-math); font-style: italic; font-weight: 400; font-size: 1.05em; }
+kbd {
+  font: 600 0.8em var(--font);
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Up to full-HD width: wide enough for big canvases, still a normal site width
+   (leaderboard and in-content ad units fit; side-rail ads would need more room). */
+.wrap { width: 100%; max-width: 1920px; margin-inline: auto; padding-inline: 16px; }
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; left: 8px; top: -48px; z-index: 10;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--accent); color: var(--accent-contrast);
+}
+.skip-link:focus { top: 8px; }
+
+/* ---------- Header / footer ---------- */
+
+.site-header { background: var(--surface); border-bottom: 1px solid var(--border); }
+.header-inner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 4px 16px; min-height: 60px; padding-block: 6px;
+}
+.brand { font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.01em; }
+.nav-list { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin: 0; padding: 0; list-style: none; }
+.nav-list a { display: inline-block; padding: 10px 2px; color: var(--text); text-decoration: none; font-size: 0.95rem; }
+.nav-list a:hover { color: var(--accent); }
+.nav-list a.support-link {
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--muted); font-size: 0.875rem;
+}
+.nav-list a.support-link:hover { color: var(--accent); border-color: var(--accent); }
+
+.site-footer { margin-top: 64px; border-top: 1px solid var(--border); background: var(--surface); }
+.footer-inner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 24px; padding-block: 20px; color: var(--muted); font-size: 0.9rem;
+}
+.footer-inner p { margin: 0; }
+
+.noscript { margin: 16px; padding: 12px; background: var(--warn-bg); color: var(--warn-fg); border-radius: var(--radius-sm); }
+
+/* ---------- Ad slots ----------
+   Hidden unless ads are enabled (html.ads-enabled) or ?showslots=1 (html.show-slots).
+   Fixed box sizes reserve space so an ad loading later can't shift the layout. */
+
+.ad-slot { display: none; }
+.ads-enabled .ad-slot, .show-slots .ad-slot { display: block; text-align: center; }
+.ad-slot--leaderboard { padding-top: 16px; }
+.ad-label {
+  display: block; margin-bottom: 4px;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.ad-box { max-width: 100%; margin-inline: auto; }
+.ad-slot--leaderboard .ad-box { width: 320px; height: 50px; }
+.ad-slot--rect .ad-box { width: 300px; height: 250px; }
+@media (min-width: 768px) {
+  .ad-slot--leaderboard .ad-box { width: 728px; height: 90px; }
+}
+.show-slots .ad-box {
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--border-strong); border-radius: 6px;
+  color: var(--muted); font-size: 13px;
+}
+.show-slots .ad-slot--leaderboard .ad-box::after { content: "Leaderboard 320 × 50"; }
+.show-slots .ad-slot--rect .ad-box::after { content: "Rectangle 300 × 250"; }
+@media (min-width: 768px) {
+  .show-slots .ad-slot--leaderboard .ad-box::after { content: "Leaderboard 728 × 90"; }
+}
+
+/* ---------- Page intro ---------- */
+
+/* The intro sits between the leaderboard and the sim toggle: >= 48 px clearance. */
+.page-intro { padding-block: 32px 24px; max-width: 760px; }
+.eyebrow {
+  margin: 0 0 6px; font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+}
+.lead { font-size: 1.075rem; color: var(--muted); margin: 0; }
+
+/* ---------- Cards ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+@media (min-width: 640px) { .card { padding: 20px; } }
+/* Less padding around the canvas so the drawing gets the width */
+@media (min-width: 1024px) { .sim-card { padding: 12px; } }
+.card-title { font-size: 1.1rem; margin-bottom: 12px; }
+
+/* ---------- Buttons & form controls ---------- */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 16px;
+  font: inherit; font-weight: 600; font-size: 0.95rem;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  cursor: pointer; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); color: var(--accent-contrast); border-color: transparent; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--accent); }
+.btn-ghost:hover { background: var(--accent-soft); }
+.btn-small { min-height: 36px; padding: 0 12px; font-size: 0.875rem; }
+.btn-icon { width: 44px; padding: 0; font-size: 1.25rem; }
+.btn-play { min-width: 96px; }
+
+select, input[type="number"] {
+  min-height: 44px; padding: 0 10px;
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+
+input[type="range"] {
+  display: block; width: 100%; height: 44px; margin: 0;
+  accent-color: var(--accent); background: transparent; cursor: pointer;
+  touch-action: pan-y; /* horizontal drags move the thumb, vertical ones scroll */
+}
+
+/* Segmented control built from native radios (keyboard: arrows/Tab for free) */
+.segmented {
+  position: relative; display: inline-flex; flex-wrap: wrap; gap: 2px;
+  margin: 0; padding: 3px; min-inline-size: 0;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2);
+}
+.segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.segmented label {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 40px; padding: 0 18px; border-radius: 999px;
+  font-weight: 600; font-size: 0.95rem; color: var(--muted);
+  cursor: pointer; user-select: none;
+}
+.segmented label:hover { color: var(--text); }
+.segmented input:checked + label { background: var(--accent); color: var(--accent-contrast); }
+.segmented input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.segmented--small label { min-height: 38px; padding: 0 12px; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+/* ---------- Simulator layout ---------- */
+
+/* The sim is desktop-first and wide: the canvas always takes the full content
+   width. Controls sit below it (in columns), never beside it. */
+.sim-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
+
+/* Tall views (body.layout-tall: set per view by initTabs for free fall and angular
+   velocity, or on <body> for a whole page, e.g. pendulum):
+   controls move above, and the canvas grows to fill the screen height so the
+   drop / circle can be as big as possible. scrollIntoView puts the sim card at
+   the top of the screen when you switch to one. */
+.layout-tall .sim-layout .controls-card { order: -1; }
+.layout-tall .canvas-wrap {
+  height: max(360px, calc(100vh - 200px));
+  height: max(360px, calc(100svh - 200px));
+}
+.sim-card { scroll-margin-top: 8px; }
+.controls-grid {
+  display: grid; gap: 4px 32px; align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.control-label { font-weight: 600; }
+
+.sim-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.toolbar-note { margin: 0; max-width: 46ch; }
+.scale-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.scale-status small { font-size: 0.8rem; }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 650;
+}
+.badge--warn { background: var(--warn-bg); color: var(--warn-fg); }
+.badge--ok { background: var(--ok-bg); color: var(--ok-fg); }
+
+.canvas-wrap {
+  position: relative;
+  height: clamp(280px, 58vh, 720px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--canvas-bg);
+  overflow: hidden;
+}
+.canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+
+.time-badge {
+  position: absolute; top: 10px; right: 10px;
+  padding: 5px 10px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  pointer-events: none;
+}
+.time-badge.is-slow { background: var(--warn-bg); color: var(--warn-fg); border-color: transparent; }
+
+.sim-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.select-label { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
+.sim-hint { margin: 10px 0 0; font-size: 0.85rem; }
+
+/* Content for one view only ([data-view-only]) is hidden/shown by initTabs() in simkit.js. */
+
+/* Full screen (simkit initFullscreen): the whole sim card, toolbar and controls
+   included, fills the screen and the canvas takes all the free height. */
+.sim-card:fullscreen {
+  display: flex; flex-direction: column; gap: 8px;
+  width: 100vw; height: 100vh; max-width: none; margin: 0;
+  padding: 10px 14px 12px; border: 0; border-radius: 0;
+  overflow: auto; background: var(--surface);
+}
+.sim-card:fullscreen > .sim-toolbar,
+.sim-card:fullscreen > .sim-controls,
+.sim-card:fullscreen > .zoom-row { margin: 0; }
+.sim-card:fullscreen .canvas-wrap { flex: 1 1 0; height: auto; min-height: 300px; }
+.sim-card:fullscreen .sim-hint { display: none; }
+.sim-card::backdrop { background: var(--surface); }
+.fs-hint {
+  position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); margin: 0;
+  padding: 8px 14px; border-radius: 999px; background: rgba(14, 18, 26, 0.9); color: #e8ecf3;
+  font-size: 0.85rem; pointer-events: none; z-index: 3;
+}
+.fs-hint kbd { background: #161a20; color: #e8ecf3; }
+
+/* ---------- Controls card ---------- */
+
+.control { padding-block: 10px; border-bottom: 1px solid var(--border); }
+.control:first-of-type { padding-top: 0; }
+.control-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.control-head label { font-weight: 600; }
+.num-field { display: inline-flex; align-items: center; gap: 6px; }
+.num-field input {
+  width: 6.2em; text-align: right; font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+}
+.unit { min-width: 3.2em; font-size: 0.85rem; color: var(--muted); }
+.range-hint {
+  display: flex; justify-content: space-between; margin-top: -6px;
+  font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.control-note { margin: 4px 0 0; font-size: 0.8rem; }
+
+.readouts-title { margin: 16px 0 8px; font-size: 0.95rem; }
+.readouts {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0;
+}
+.readout { padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.readout--wide { grid-column: 1 / -1; }
+.readout dt { font-size: 0.8rem; color: var(--muted); }
+.readout dd { margin: 0; font-variant-numeric: tabular-nums; }
+.readout dd b { font-size: 1.2rem; font-weight: 650; }
+.readout .sub { font-size: 0.8rem; color: var(--muted); }
+
+/* Run result / status line under the canvas (announced politely) */
+.result {
+  margin: 10px 0 0; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); font-size: 0.9rem; font-variant-numeric: tabular-nums;
+}
+.result:empty { display: none; }
+.result--warn { background: var(--warn-bg); color: var(--warn-fg); }
+
+/* Preset buttons */
+.presets { margin-top: 14px; }
+.presets h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.preset-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.preset-list .btn { min-height: 36px; padding: 0 10px; font-size: 0.85rem; font-weight: 500; }
+
+/* Checkbox / select rows inside the controls card */
+.control-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px; padding-block: 10px; border-bottom: 1px solid var(--border);
+}
+.control-row label { font-weight: 600; }
+.check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.check input { width: 24px; height: 24px; margin: 0; accent-color: var(--accent); }
+
+/* "What vibrates at this rate?" list */
+.examples { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.examples li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: 0.875rem; }
+.examples li b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- Maths card ---------- */
+
+.maths-card { margin-top: var(--gap); }
+.maths-intro { margin-top: -6px; font-size: 0.9rem; }
+.equations {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px;
+  margin: 0; padding: 0; list-style: none;
+}
+.equations li {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.eq { font-family: var(--font-math); font-size: 1.1rem; }
+.eq-note { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.eq-inline { font-family: var(--font-math); white-space: nowrap; }
+
+/* ---------- Explanation + sidebar ---------- */
+
+.explainer { display: grid; gap: 32px; margin-top: 48px; }
+@media (min-width: 1040px) {
+  .explainer { grid-template-columns: minmax(0, 72ch) 300px; justify-content: space-between; align-items: start; }
+}
+.prose { max-width: 70ch; }
+.prose h3 { margin-top: 1.4em; }
+.explainer-side { display: flex; flex-direction: column; gap: 24px; }
+
+.affiliate-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.affiliate-list li { display: flex; flex-direction: column; }
+.affiliate-placeholder {
+  padding: 10px; border: 2px dashed var(--border-strong); border-radius: 6px;
+  color: var(--muted); font-size: 0.85rem; text-align: center;
+}
+
+/* ---------- Landing page ---------- */
+
+.hero { padding-block: 40px 28px; max-width: 760px; }
+.sim-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: var(--gap);
+  margin: 0; padding: 0; list-style: none;
+}
+.sim-tile {
+  display: flex; flex-direction: column; gap: 6px; height: 100%;
+  color: inherit; text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+.sim-tile:hover { border-color: var(--accent); }
+.sim-tile svg { width: 100%; height: auto; border-radius: var(--radius-sm); background: var(--canvas-bg); }
+.sim-tile h3 { font-size: 1.15rem; margin: 6px 0 0; }
+.sim-section + .sim-section { margin-top: 40px; }
+.sim-tile p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.tags li { padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--text); font-size: 0.75rem; }
+
+/* ---------- Calibration dialog ---------- */
+
+.cal-dialog {
+  width: min(960px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  padding: 0;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.cal-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+.cal-form { padding: 20px 16px; }
+@media (min-width: 640px) { .cal-form { padding: 24px; } }
+.cal-lead { max-width: 70ch; }
+
+/* The drawn card starts flush with the stage's left edge; the user lines up a real card.
+   It is never clipped: the dialog scrolls instead and the actions stay pinned. */
+.cal-stage { margin-bottom: 8px; }
+.cal-card {
+  position: relative;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #1e3a8a);
+  touch-action: none;
+}
+.cal-card-chip {
+  position: absolute; left: 10%; top: 34%;
+  width: 13%; aspect-ratio: 1.3; max-height: 60px;
+  border-radius: 6px; background: #e3c46d;
+}
+.cal-card-label { position: absolute; left: 10px; bottom: 6px; color: #fff; font-weight: 700; font-size: 0.85rem; }
+.cal-handle {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: ew-resize; touch-action: none;
+  border-right: 2px solid #fff; border-radius: 0 12px 12px 0;
+}
+.cal-handle::after { content: ""; width: 4px; height: 40px; max-height: 60%; border-radius: 2px; background: rgba(255, 255, 255, 0.85); }
+.cal-adjust { display: flex; align-items: center; gap: 8px; }
+.cal-adjust input[type="range"] { flex: 1; }
+.cal-result { margin: 6px 0 12px; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cal-check { display: flex; align-items: flex-start; gap: 10px; font-size: 0.95rem; cursor: pointer; }
+.cal-check input { width: 24px; height: 24px; margin: 0; flex: none; accent-color: var(--accent); }
+.cal-note { margin: 12px 0 0; font-size: 0.85rem; color: var(--muted); }
+.cal-actions {
+  position: sticky; bottom: 0; z-index: 1;
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+  margin: 16px -16px -20px; padding: 12px 16px 16px;
+  background: var(--surface); border-top: 1px solid var(--border);
+}
+@media (min-width: 640px) { .cal-actions { margin: 16px -24px -24px; padding: 12px 24px 20px; } }
+.cal-panel[hidden] { display: none; }
+.cal-fields { display: grid; gap: 12px 24px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 8px 0 4px; }
+.cal-field { display: flex; flex-direction: column; gap: 6px; }
+.cal-field > label, .cal-field legend { font-weight: 600; padding: 0; }
+.cal-field fieldset { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
+.cal-inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cal-inline input { width: 6.5em; }
+.cal-actions-right { display: flex; gap: 8px; margin-left: auto; }
+
+/* ---------- Pixel size card (shared, common.js initPixelCard) ---------- */
+
+.pixel-card { margin-top: var(--gap); }
+.pixel-headline { margin: 0 0 6px; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.pixel-extra { margin: 0 0 8px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--accent-soft); font-size: 0.95rem; }
+.pixel-warn {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0 0 10px; padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--warn-bg); color: var(--warn-fg); font-size: 0.9rem;
+}
+.pixel-facts { margin: 0 0 12px; padding-left: 1.2em; color: var(--muted); font-size: 0.875rem; }
+.pixel-views { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.pixel-figure { margin: 0; }
+.pixel-figure figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.875rem; color: var(--muted); }
+.pixel-canvas { display: block; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--canvas-bg); }
+.pixel-mag label { min-height: 32px; padding: 0 10px; }
+.pixel-ladder { margin: 12px 0 0; padding-left: 1.4em; display: grid; gap: 4px; font-size: 0.9rem; }
+.pixel-ladder li.is-closest { color: var(--text); }
+.pixel-ladder li.is-closest b { color: var(--accent); }
+.pixel-size { font-variant-numeric: tabular-nums; }
+.pixel-note { font-size: 0.85rem; }
+
+/* ---------- Space simulator (solar.html) ---------- */
+
+/* Space is dark whatever the page theme; the canvas reads these colours. */
+.space-wrap {
+  --space-bg: #04060b;
+  --space-fg: #e8ecf3;
+  --space-muted: #9aa5b8;
+  --space-grid: #7d8fb3;
+  --space-accent: #6ea8ff;
+  --space-sun: #ffcc4d;
+  --space-star: #fff1d6;
+  --space-galaxy: #c3b5ff;
+  --space-marker: #78e0c3;
+  --space-warn: #ffd28a;
+  --space-label-bg: rgba(4, 6, 11, 0.62);
+  background: var(--space-bg);
+  border-color: #1d2430;
+  color: var(--space-fg);
+  height: max(420px, calc(100vh - 300px));
+  height: max(420px, calc(100svh - 300px));
+  touch-action: none; /* drag pans, pinch zooms */
+}
+.space-wrap canvas { cursor: grab; }
+.space-wrap canvas:active { cursor: grabbing; }
+.space-wrap canvas:focus-visible { outline: 2px solid var(--space-accent); outline-offset: -3px; }
+.space-wrap .time-badge { background: rgba(14, 18, 26, 0.85); color: var(--space-fg); border-color: #2a3240; }
+.space-wrap .time-badge.is-slow { background: #3a2a0c; color: #ffd28a; }
+
+.space-hud {
+  position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+  max-width: calc(100% - 220px);
+  padding: 6px 12px; border-radius: 999px;
+  background: rgba(14, 18, 26, 0.88); border: 1px solid #2a3240; color: var(--space-fg);
+  font-size: 0.8rem; font-variant-numeric: tabular-nums; text-align: center;
+  pointer-events: none;
+}
+.space-hud--pulse { top: auto; bottom: 44px; color: var(--space-warn); }
+.space-tip {
+  position: absolute; z-index: 2; max-width: min(420px, calc(100% - 16px));
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px; border-radius: 8px;
+  background: rgba(14, 18, 26, 0.95); border: 1px solid #3a4558; color: var(--space-fg);
+  font-size: 0.82rem; line-height: 1.35; pointer-events: none;
+}
+.space-tip strong { font-size: 0.88rem; }
+.space-tip span { color: var(--space-muted); }
+
+.space-tip .space-tip-more { color: var(--space-accent); font-size: 0.75rem; }
+
+/* Fact card for a clicked object (inside the canvas wrapper, so it stays in full screen). */
+.space-card {
+  position: absolute; left: 10px; top: 10px; z-index: 3;
+  width: min(340px, calc(100% - 20px)); max-height: calc(100% - 20px); overflow: auto;
+  padding: 12px 14px; border-radius: 10px;
+  background: rgba(12, 16, 24, 0.96); border: 1px solid #3a4558; color: var(--space-fg);
+  font-size: 0.85rem; line-height: 1.4;
+}
+.space-card h3 { margin: 0 28px 2px 0; font-size: 1.05rem; }
+.space-card p { margin: 0 0 8px; }
+.space-card-sub { color: var(--space-accent); font-size: 0.8rem; }
+.space-card-facts { margin: 0 0 8px; display: grid; gap: 3px; }
+.space-card-facts div { display: grid; grid-template-columns: minmax(90px, 38%) 1fr; gap: 8px; }
+.space-card-facts dt { color: var(--space-muted); }
+.space-card-facts dd { margin: 0; }
+.space-card-scale { color: var(--space-warn); font-size: 0.8rem; }
+.space-card-source { color: var(--space-muted); font-size: 0.75rem; }
+.space-card-source a { color: var(--space-accent); }
+.space-card-close {
+  position: absolute; top: 4px; right: 4px; width: 32px; height: 32px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--space-fg);
+  font-size: 1.3rem; line-height: 1; cursor: pointer;
+}
+.space-card-close:hover, .space-card-close:focus-visible { background: rgba(255, 255, 255, 0.1); }
+.space-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.space-card-actions .btn { min-height: 32px; background: #1b2230; color: var(--space-fg); border-color: #3a4558; }
+
+/* Galactic view: the places to visit along the rail. */
+.rail-stops { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.rail-stops .stop-btn { min-height: 34px; padding: 0 10px; font-weight: 500; }
+.rail-stops .stop-btn.is-current { background: var(--accent); color: var(--accent-contrast); border-color: transparent; }
+
+.zoom-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; }
+.zoom-row input[type="range"] { flex: 1 1 260px; width: auto; }
+.zoom-end { font-size: 0.8rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+.rate-group .seg-item { display: inline-flex; }
+.rate-group label { padding: 0 10px; }
+
+.space-grid { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.readout dd + dd { margin-top: 2px; }
+
+.equiv summary { list-style: none; cursor: pointer; }
+.equiv summary::-webkit-details-marker { display: none; }
+.equiv summary h3 { display: inline-block; }
+.equiv summary h3::after { content: " ▾"; color: var(--muted); font-size: 0.8em; }
+.equiv:not([open]) summary h3::after { content: " ▸"; }
+.equiv-span { margin: 0 0 10px; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.equiv-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.equiv-pick label { font-weight: 600; font-size: 0.9rem; }
+.equiv-pick select { flex: 1 1 200px; max-width: 100%; }
+.equiv-picked { margin: 8px 0; font-size: 0.875rem; font-variant-numeric: tabular-nums; min-height: 1.4em; }
+.equiv-list { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.equiv-list li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px;
+  padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: 0.85rem;
+}
+.equiv-list li .btn { margin-left: auto; min-height: 30px; }
+.equiv-label { font-weight: 650; }
+.equiv-value { color: var(--muted); font-variant-numeric: tabular-nums; }
+#equiv-pinned:not(:empty) { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.equiv-note { margin: 4px 0 0; }
+
+.data-credits { margin-top: 32px; }
+.data-credits ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); }
+
+/* ---------- Simple pages (privacy) ---------- */
+
+.page { padding-block: 40px; max-width: 70ch; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}

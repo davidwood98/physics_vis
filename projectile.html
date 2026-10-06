@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projectile Motion Simulator: Range, Height and Flight Time | Real-Scale Physics</title>
+  <meta name="description" content="Throw a ball at a chosen speed, angle and height and watch the whole flight in real time. Range, maximum height and flight time, with a 1.8 m person for scale.">
+  <link rel="canonical" href="https://example.com/projectile.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Projectile Motion: Range, Height and Flight Time">
+  <meta property="og:description" content="Throw a ball and watch the whole flight in real time, with a person for scale.">
+  <meta property="og:url" content="https://example.com/projectile.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/projectile.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Kinematics</p>
+      <h1>Projectile motion</h1>
+      <p class="lead">Throw a ball and watch the whole flight in real time. The view is scaled to fit the throw, with a 1.8&nbsp;m person for comparison. A 10&nbsp;m/s throw at 45&deg; lands about 10&nbsp;m away.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">Side view, scaled to fit the whole throw. Times are real; the ball and person are drawn to the same scale (see the scale bar).</p>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Projectile simulation"></canvas>
+          <span class="time-badge" id="time-badge">REAL TIME</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Throw</button>
+          <button type="button" class="btn" id="reset-btn">Reset</button>
+          <fieldset class="segmented segmented--small">
+            <legend class="visually-hidden">Time scale</legend>
+            <input type="radio" name="timescale" id="ts-1" value="1" checked>
+            <label for="ts-1">1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.5" value="0.5">
+            <label for="ts-0.5">0.5&times;</label>
+            <input type="radio" name="timescale" id="ts-0.1" value="0.1">
+            <label for="ts-0.1">0.1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.01" value="0.01">
+            <label for="ts-0.01">0.01&times;</label>
+          </fieldset>
+          <label class="check"><input type="checkbox" id="show-path" checked> Show predicted path</label>
+        </div>
+        <p class="result" id="result" aria-live="polite"></p>
+        <p class="sim-hint muted" id="sim-hint">Press <kbd>Space</kbd> to throw or pause. Use slow motion to follow a fast throw. No air resistance.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="v-range">Launch speed <var>v</var></label>
+                <span class="num-field">
+                  <input type="number" id="v-num" inputmode="decimal" aria-label="Launch speed v, metres per second">
+                  <span class="unit" aria-hidden="true">m/s</span>
+                </span>
+              </div>
+              <input type="range" id="v-range">
+              <div class="range-hint" aria-hidden="true"><span>1</span><span id="v-alt"></span><span>30 m/s</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="ang-range">Launch angle <var>&theta;</var></label>
+                <span class="num-field">
+                  <input type="number" id="ang-num" inputmode="decimal" aria-label="Launch angle, degrees">
+                  <span class="unit" aria-hidden="true">°</span>
+                </span>
+              </div>
+              <input type="range" id="ang-range">
+              <div class="range-hint" aria-hidden="true"><span>0°</span><span>90°</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="h-range">Launch height <var>h</var><sub>0</sub></label>
+                <span class="num-field">
+                  <input type="number" id="h-num" inputmode="decimal" aria-label="Launch height, metres">
+                  <span class="unit" aria-hidden="true">m</span>
+                </span>
+              </div>
+              <input type="range" id="h-range">
+              <div class="range-hint" aria-hidden="true"><span>ground</span><span>2 m</span></div>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout">
+                <dt>Range <var>R</var></dt>
+                <dd><b data-out="R">–</b> m</dd>
+              </div>
+              <div class="readout">
+                <dt>Max height <var>H</var></dt>
+                <dd><b data-out="H">–</b> m</dd>
+              </div>
+              <div class="readout">
+                <dt>Flight time</dt>
+                <dd><b data-out="T">–</b> s</dd>
+              </div>
+              <div class="readout">
+                <dt>Time <var>t</var></dt>
+                <dd><b data-out="t">–</b> s</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Ball now</dt>
+                <dd><b data-out="pos">–</b></dd>
+                <dd class="sub" data-out="vel">–</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col">
+            <div class="presets">
+              <h3>Presets</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="ten">10 m/s at 45° (≈ 10 m)</button></li>
+                <li><button type="button" class="btn" data-preset="lob">Gentle lob: 5 m/s at 60°</button></li>
+                <li><button type="button" class="btn" data-preset="flat">Hard flat throw: 25 m/s at 10°</button></li>
+                <li><button type="button" class="btn" data-preset="shoulder">From shoulder height (1.5 m)</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Horizontal and vertical motion are independent. Your current values plugged in (g = 9.81 m/s²).</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">v<sub>x</sub> = v cos &theta;, &nbsp;v<sub>y</sub> = v sin &theta;</span>
+          <span class="eq-note" data-eq="comp">–</span>
+        </li>
+        <li>
+          <span class="eq">x = v<sub>x</sub> t, &nbsp;y = h<sub>0</sub> + v<sub>y</sub> t &minus; ½ g t<sup>2</sup></span>
+          <span class="eq-note" data-eq="pos">–</span>
+        </li>
+        <li>
+          <span class="eq">H = h<sub>0</sub> + v<sub>y</sub><sup>2</sup> / 2g</span>
+          <span class="eq-note" data-eq="H">–</span>
+        </li>
+        <li>
+          <span class="eq">R = v<sup>2</sup> sin 2&theta; / g &nbsp;(from the ground)</span>
+          <span class="eq-note" data-eq="R">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Projectile motion, explained</h2>
+
+        <h3>Two motions at once</h3>
+        <p>Once a ball leaves your hand (ignoring air), nothing pushes it sideways, so it moves horizontally at a steady <span class="eq-inline">v<sub>x</sub> = v cos &theta;</span>. Vertically, gravity slows it on the way up and speeds it up on the way down, exactly as if it had been thrown straight up at <span class="eq-inline">v<sub>y</sub> = v sin &theta;</span>. Put the two together and you get a parabola.</p>
+
+        <h3>Range and the 45&deg; rule</h3>
+        <p>Thrown from the ground, the ball lands at <span class="eq-inline">R = v<sup>2</sup> sin 2&theta; / g</span>. sin 2&theta; is largest at 45&deg;, so that's the angle for maximum range, and angles either side of 45&deg; (say 30&deg; and 60&deg;) land in the same place. A 10&nbsp;m/s throw at 45&deg; travels 10.2&nbsp;m, reaches 2.55&nbsp;m high and is in the air for 1.44&nbsp;s. Range grows with the <em>square</em> of speed: throw twice as fast and it goes four times as far.</p>
+
+        <h3>Reading the view</h3>
+        <p>A real throw is far bigger than any screen, so the view is scaled to fit the whole flight, with the scale bar in the corner and a 1.8&nbsp;m person beside the launch point for comparison. Time isn't scaled: at 1&times; the ball takes exactly as long as a real throw would.</p>
+
+        <h3>Real balls fall short</h3>
+        <p>Air resistance slows real balls, so they land shorter than this and their best angle is a little below 45&deg;. For a slow, heavy ball over a short distance the difference is small.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Launcher kits and mechanics books. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <li class="affiliate-placeholder">Affiliate link slot: projectile launcher kit</li>
+            <li class="affiliate-placeholder">Affiliate link slot: mechanics textbook</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

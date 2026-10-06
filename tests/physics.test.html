@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>physics.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>physics.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/physics.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as P from '../js/physics.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+
+    // --- Unit conversions ---
+    check('1 m/s = 3.6 km/h', near(P.msToKmh(1), 3.6));
+    check('km/h round trip', near(P.kmhToMs(P.msToKmh(7.3)), 7.3));
+    check('0.44704 m/s = 1 mph', near(P.msToMph(0.44704), 1));
+    check('100 km/h ≈ 62.137 mph', near(P.msToMph(P.kmhToMs(100)), 62.1371192, 1e-8));
+    check('mph round trip', near(P.mphToMs(P.msToMph(2.5)), 2.5));
+    check('2π rad/s = 60 rpm', near(P.radPerSecToRpm(2 * Math.PI), 60));
+    check('rpm round trip', near(P.rpmToRadPerSec(P.radPerSecToRpm(20)), 20));
+    check('20 rad/s ≈ 191 rpm (worked example)', Math.round(P.radPerSecToRpm(20)) === 191);
+    check('f = ω/2π: 2π rad/s → 1 Hz', near(P.frequencyFromOmega(2 * Math.PI), 1));
+    check('T = 2π/ω: π rad/s → 2 s', near(P.periodFromOmega(Math.PI), 2));
+    check('T is Infinity at ω = 0', P.periodFromOmega(0) === Infinity);
+    check('a = v²/r: 2 m/s on 0.1 m → 40 m/s²', near(P.centripetalAcceleration(2, 0.1), 40));
+    check('96 px/in → ≈3779.53 CSS px per metre', near(P.APPROX_CSS_PX_PER_METRE, 96 / 0.0254));
+
+    // --- v = ω·r coupling invariant ---
+    const a = P.coupleFromSpeed({ v: 2, r: 0.1 });
+    check('coupleFromSpeed: 2 m/s, 0.1 m → ω = 20 rad/s', near(a.omega, 20));
+    const b = P.coupleFromOmega({ omega: 15, r: 0.04 });
+    check('coupleFromOmega: 15 rad/s, 0.04 m → v = 0.6 m/s', near(b.v, 0.6));
+    let invariantHolds = true;
+    for (let i = 0; i < 1000; i++) {
+      const v = 0.1 + Math.random() * 9.9;
+      const r = 0.02 + Math.random() * 0.13;
+      const s1 = P.coupleFromSpeed({ v, r });
+      const s2 = P.coupleFromOmega({ omega: s1.omega * (0.5 + Math.random()), r });
+      if (!near(s1.v, s1.omega * s1.r) || !near(s2.v, s2.omega * s2.r)) invariantHolds = false;
+    }
+    check('invariant v = ω·r holds for 1000 random states', invariantHolds);
+    const range = P.omegaRange(0.05, 0.1, 10);
+    check('omegaRange at r = 0.05 m is [2, 200] rad/s', near(range.min, 2) && near(range.max, 200));
+
+    // --- wrap ---
+    check('wrap(5.5, 2) = 1.5', near(P.wrap(5.5, 2), 1.5));
+    check('wrap(-0.5, 2) = 1.5 (moving left)', near(P.wrap(-0.5, 2), 1.5));
+    check('wrap(2, 2) = 0', P.wrap(2, 2) === 0);
+    check('wrap(-1e-17, 1) stays < length', P.wrap(-1e-17, 1) < 1);
+    check('wrapAngle(-π/2) = 3π/2', near(P.wrapAngle(-Math.PI / 2), 1.5 * Math.PI));
+
+    // --- time stepping ---
+    check('clampFrameDelta caps at 0.1 s', P.clampFrameDelta(5) === 0.1);
+    check('clampFrameDelta: negative/NaN → 0', P.clampFrameDelta(-1) === 0 && P.clampFrameDelta(NaN) === 0);
+    const run = (hz, seconds, v) => {
+      let x = 0;
+      for (let i = 0; i < hz * seconds; i++) x = P.advance(x, v, 1, 1 / hz);
+      return x;
+    };
+    check('60 Hz vs 144 Hz: same position after 1 s at 2 m/s', near(run(60, 1, 2), run(144, 1, 2), 1e-12));
+    check('2 m/s for 0.5 s covers 1 m', near(run(60, 0.5, 2), 1, 1e-12));
+    check('direction −1 moves backwards', P.advance(1, 2, -1, 0.25) === 0.5);
+
+    // --- calibration maths ---
+    const dpp = P.devicePxPerMetreFromCard(323.5, 2);
+    check('card calibration: 323.5 CSS px @2x → 7558.4 device px/m', near(dpp, (323.5 * 2) / 0.0856));
+    check('calibration round trip at a different zoom (dpr 2.5)', near(P.cssPxPerMetreFromDevice(dpp, 2.5) * 0.0856 * 2.5, 323.5 * 2));
+    check('short-edge calibration uses 53.98 mm', near(P.devicePxPerMetreFromCard(204, 1, P.ID1_CARD_HEIGHT_M), 204 / 0.05398));
+
+    // --- geometry helpers ---
+    check('snapDown(0.0679, 0.005) = 0.065', P.snapDown(0.0679, 0.005) === 0.065);
+    check('snapDown(0.15, 0.005) = 0.15 (no float drift)', P.snapDown(0.15, 0.005) === 0.15);
+    check('maxRadiusToFit: 800×600 px, 1000 px/m, 20 px margin → 0.28 m', near(P.maxRadiusToFit(800, 600, 1000, 20), 0.28));
+    check('niceScaleBarLength(0.3) = 0.2', P.niceScaleBarLength(0.3) === 0.2);
+    check('niceScaleBarLength(3) = 1', P.niceScaleBarLength(3) === 1);
+    const ticks = P.rulerTicks(1.23);
+    check('rulerTicks(1.23 m) has 124 ticks (0…123 cm)', ticks.length === 124);
+    check('rulerTicks kinds: 0 m, 50 half, 10 dm, 1 cm, 100 m',
+      ticks[0].kind === 'm' && ticks[50].kind === 'half' && ticks[10].kind === 'dm' && ticks[1].kind === 'cm' && ticks[100].kind === 'm');
+
+    // --- generic helpers ---
+    check('niceStep: 0.03 → 0.05, 7 → 10, 0.1 → 0.1', P.niceStep(0.03) === 0.05 && P.niceStep(7) === 10 && P.niceStep(0.1) === 0.1);
+    check('niceFloor: 0.3 → 0.2, 3 → 2, 50 → 50', P.niceFloor(0.3) === 0.2 && P.niceFloor(3) === 2 && P.niceFloor(50) === 50);
+    check('log slider round trip (0.5–100 Hz)', near(P.logFractionToValue(P.valueToLogFraction(50, 0.5, 100), 0.5, 100), 50));
+    check('log slider ends: 0 → min, 1 → max', near(P.logFractionToValue(0, 0.5, 100), 0.5) && near(P.logFractionToValue(1, 0.5, 100), 100));
+
+    // --- screen-size calibration ---
+    check('24″ 1920×1080 ≈ 91.79 ppi', near(P.devicePxPerMetreFromScreen(24, 1920, 1080) * 0.0254, 91.7878, 1e-5));
+    check('27″ 2560×1440 ≈ 108.79 ppi', near(P.devicePxPerMetreFromScreen(27, 2560, 1440) * 0.0254, 108.786, 1e-5));
+
+    // --- constant acceleration ---
+    check('x = ut + ½at²: u=2, a=3, t=4 → 32 m', near(P.constAccelPosition(2, 3, 4), 32));
+    check('v = u + at: 2 + 3×4 = 14 m/s', near(P.constAccelVelocity(2, 3, 4), 14));
+    check('30 mph Highway Code: 14 m braking → a ≈ 6.42 m/s²', near(P.mphToMs(30) ** 2 / (2 * 14), 6.42358, 1e-4));
+    check('stopping distance u²/2a: 13.4 m/s at 6.4 → 14.03 m', near(P.stoppingDistance(13.4, 6.4), 14.028125));
+    check('v² = u² + 2ax: from rest, a=4.47, 0.3 m → 1.638 m/s', near(P.speedAfterDistance(0, 4.47, 0.3), Math.sqrt(2 * 4.47 * 0.3)));
+    const tc = P.timeToCoverDistance(1, 2, 3);
+    check('timeToCoverDistance satisfies x(t) = d', near(P.constAccelPosition(1, 2, tc), 3));
+    check('timeToCoverDistance: braking that stops short → Infinity', P.timeToCoverDistance(1, -1, 1) === Infinity);
+    check('timeToCoverDistance: zero acceleration → d/u', near(P.timeToCoverDistance(2, 0, 3), 1.5));
+    const late = P.constAccelState(10, -5, 10);
+    check('braking state stays stopped at d = u²/2a after tStop', late.stopped && late.v === 0 && near(late.x, 10));
+    check('free fall 1 m on Earth ≈ 0.4516 s', near(P.freeFallTime(1, P.G0), 0.4516, 1e-4));
+    check('free fall: Moon/Earth time ratio = √(g_E/g_M)', near(P.freeFallTime(1, 1.62) / P.freeFallTime(1, P.G0), Math.sqrt(P.G0 / 1.62)));
+    check('impact speed √(2gh): 1 m → 4.43 m/s', near(P.freeFallSpeed(1, P.G0), 4.4287, 1e-4));
+
+    // --- pendulum ---
+    check('T₀(0.25 m) ≈ 1.003 s', near(P.pendulumSmallAnglePeriod(0.25, P.G0), 1.00321, 1e-5));
+    check('T₀(1 m) ≈ 2.006 s', near(P.pendulumSmallAnglePeriod(1, P.G0), 2.00641, 1e-5));
+    check('seconds pendulum length ≈ 0.9936 m', near(P.pendulumLengthForPeriod(2, P.G0), 0.99362, 1e-4));
+    check('exact period at 60° is ≈ 7.3% longer', near(P.pendulumPeriod(1, P.G0, Math.PI / 3) / P.pendulumSmallAnglePeriod(1, P.G0), 1.07318, 1e-4));
+    check('exact period → T₀ for tiny angles', near(P.pendulumPeriod(1, P.G0, 1e-6), P.pendulumSmallAnglePeriod(1, P.G0)));
+    {
+      // RK4 integration: measured period at 30° matches the exact formula, and mass doesn't matter
+      const run = (L, th0) => {
+        let th = th0, om = 0, t = 0, last = null, period = null;
+        const h = 1 / 2000;
+        while (t < 6) {
+          const prev = th;
+          ({ theta: th, omega: om } = P.pendulumStep(th, om, h, L, P.G0, 0));
+          t += h;
+          if (prev < 0 && th >= 0) {
+            const tc = t - h * (th / (th - prev));
+            if (last !== null) period = tc - last;
+            last = tc;
+          }
+        }
+        return period;
+      };
+      const th0 = P.degToRad(30);
+      check('RK4 pendulum period at 30° matches exact formula (±0.1 ms)', Math.abs(run(0.5, th0) - P.pendulumPeriod(0.5, P.G0, th0)) < 1e-4);
+    }
+    check('steel ball of 100 g has ≈ 14.5 mm radius', near(P.steelBallRadius(0.1), 0.014503, 1e-3));
+
+    // --- vibration ---
+    check('1 mm at 50 Hz: peak velocity 0.314 m/s', near(P.shmPeakVelocity(50, 0.001), 0.314159, 1e-5));
+    check('1 mm at 50 Hz: peak acceleration ≈ 98.7 m/s² (≈ 10 g)', near(P.shmPeakAcceleration(50, 0.001), 98.696, 1e-4));
+    check('sine RMS = peak/√2', near(P.sineRms(1), Math.SQRT1_2));
+    check('square wave on-fraction over whole cycles = 0.5', near(P.squareWaveOnFraction(0, 10 * Math.PI), 0.5));
+    check('square wave on-fraction: first half cycle = 1, second = 0', near(P.squareWaveOnFraction(0.1, 3), 1) && near(P.squareWaveOnFraction(3.3, 6), 0));
+    check('duty 25%: on-fraction over whole cycles = 0.25', near(P.squareWaveOnFraction(0, 20 * Math.PI, 0.25), 0.25));
+    check('duty 75%: on at 1.4π, off at 1.6π', P.squareWaveIsOn(1.4 * Math.PI, 0.75) && !P.squareWaveIsOn(1.6 * Math.PI, 0.75));
+    check('duty 50% matches sin ≥ 0 at sample phases', [0.1, 1, 2, 3, 3.3, 4, 5, 6].every((x) => P.squareWaveIsOn(x) === (Math.sin(x) >= 0)));
+    check('square wave on-fraction with zero span samples the state', P.squareWaveOnFraction(1, 1) === 1 && P.squareWaveOnFraction(4, 4) === 0);
+
+    // --- projectile ---
+    const q = P.degToRad(45);
+    check('10 m/s at 45°: range ≈ 10.20 m', near(P.projectileRange(10, q, 0, P.G0), 10.1972, 1e-4));
+    check('10 m/s at 45°: flight time ≈ 1.442 s', near(P.projectileFlightTime(10, q, 0, P.G0), 1.44206, 1e-4));
+    check('10 m/s at 45°: max height ≈ 2.549 m', near(P.projectileMaxHeight(10, q, 0, P.G0), 2.54929, 1e-4));
+    check('range: 30° and 60° land together from the ground',
+      near(P.projectileRange(10, P.degToRad(30), 0, P.G0), P.projectileRange(10, P.degToRad(60), 0, P.G0)));
+    const land = P.projectileState(12, P.degToRad(35), 1.5, P.G0, P.projectileFlightTime(12, P.degToRad(35), 1.5, P.G0));
+    check('projectile from 1.5 m lands at y = 0', near(land.y, 0, 1e-9) || Math.abs(land.y) < 1e-9);
+
+    // --- conveyor: fixed rate, variable belt speed ---
+    check('120/min → one product every 0.5 s', near(P.productInterval(120), 0.5));
+    check('pitch = v × T: 0.25 m/s at 120/min → 125 mm', near(P.pitchForRate(0.25, 120), 0.125));
+    check('slowest belt (touching) = l / T: 100 mm at 120/min → 0.2 m/s', near(P.minBeltSpeed(120, 0.1), 0.2));
+    check('at 0.25 m/s: occupied 0.4 s, free 0.1 s', near(P.occupiedTime(0.1, 0.25), 0.4) && near(P.freeTime(0.125, 0.1, 0.25), 0.1));
+    check('at 1 m/s: occupied 0.1 s, free 0.4 s (same rate, 4× the free time)', near(P.occupiedTime(0.1, 1), 0.1) && near(P.freeTime(P.pitchForRate(1, 120), 0.1, 1), 0.4));
+    {
+      let ok = true;
+      for (let i = 0; i < 500; i++) {
+        const rate = 1 + Math.random() * 999, l = 0.01 + Math.random() * 0.49;
+        const v = P.minBeltSpeed(rate, l) * (1 + Math.random() * 5);
+        const sum = P.occupiedTime(l, v) + P.freeTime(P.pitchForRate(v, rate), l, v);
+        if (!near(sum, P.productInterval(rate))) ok = false;
+      }
+      check('occupied + free = T for 500 random settings', ok);
+    }
+    check('free time is 0 when products touch', P.freeTime(0.1, 0.1, 0.5) === 0);
+    check('pointOccupied: covered inside a product, free in the gap',
+      P.pointOccupied(0.05, 0, 0.125, 0.1) && !P.pointOccupied(0.11, 0, 0.125, 0.1) && P.pointOccupied(0.13, 0, 0.125, 0.1));
+    {
+      // fraction of time the point is covered, sampled over many cycles, = l / p
+      let covered = 0;
+      const N = 100000, v = 0.4, pitch = 0.2, l = 0.05;
+      for (let i = 0; i < N; i++) if (P.pointOccupied(0.7, (i / N) * 50 * pitch, pitch, l)) covered++;
+      check('sampled occupied fraction ≈ l / p', Math.abs(covered / N - l / pitch) < 0.002);
+    }
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`physics.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>
