@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /tests/
+Disallow: /physics_vis/tests/
 
-Sitemap: https://example.com/sitemap.xml
+Sitemap: https://davidwood98.github.io/physics_vis/sitemap.xml

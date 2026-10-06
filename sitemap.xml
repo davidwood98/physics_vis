@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://example.com/</loc>
+    <loc>https://davidwood98.github.io/physics_vis/</loc>
   </url>
   <url>
-    <loc>https://example.com/velocity.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/velocity.html</loc>
   </url>
   <url>
-    <loc>https://example.com/acceleration.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/acceleration.html</loc>
   </url>
   <url>
-    <loc>https://example.com/pendulum.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/pendulum.html</loc>
   </url>
   <url>
-    <loc>https://example.com/frequency.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/frequency.html</loc>
   </url>
   <url>
-    <loc>https://example.com/projectile.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/projectile.html</loc>
   </url>
   <url>
-    <loc>https://example.com/conveyor.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/conveyor.html</loc>
   </url>
   <url>
-    <loc>https://example.com/solar.html</loc>
+    <loc>https://davidwood98.github.io/physics_vis/solar.html</loc>
   </url>
 </urlset>
