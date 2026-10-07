@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beam Deflection Calculator, Drawn at True Size | Real-Scale Physics</title>
+  <meta name="description" content="Free beam deflection calculator for cantilevers and simply supported beams, with the bend drawn at true 1:1 size on your screen. Choose the section, material, span and load to see deflection, slope, bending moment and stress, with cited formulas.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/beam.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Beam Deflection at True Size">
+  <meta property="og:description" content="See how little a loaded beam really bends: deflection drawn at 1:1 on your own screen, with cited formulas.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/beam.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/beam.js"></script>
+</head>
+<body class="page-beam">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Engineering</p>
+      <h1>Beam deflection at true size</h1>
+      <p class="lead">Pick a cantilever or a simply supported beam, its section, material, span and load. The bend is drawn at true size on your screen, usually a fraction of a millimetre. A teaching tool, not a design check.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Beam drawing</h2>
+
+        <div class="sim-toolbar">
+          <fieldset class="segmented" id="exag-toggle">
+            <legend class="visually-hidden">Deflection drawn at</legend>
+            <input type="radio" name="exag" id="exag-1" value="1" checked>
+            <label for="exag-1">True size</label>
+            <input type="radio" name="exag" id="exag-10" value="10">
+            <label for="exag-10">&times;10</label>
+            <input type="radio" name="exag" id="exag-50" value="50">
+            <label for="exag-50">&times;50</label>
+            <input type="radio" name="exag" id="exag-200" value="200">
+            <label for="exag-200">&times;200</label>
+          </fieldset>
+
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap beam-canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Beam deflection drawing"></canvas>
+        </div>
+
+        <div class="sim-controls">
+          <label class="select-label">
+            <span>Beam</span>
+            <select id="case-select">
+              <option value="cantilever-end">Cantilever, point load at the free end</option>
+              <option value="cantilever-udl">Cantilever, load spread evenly (UDL)</option>
+              <option value="simple-centre" selected>Simply supported, point load at the centre</option>
+              <option value="simple-udl">Simply supported, load spread evenly (UDL)</option>
+              <option value="simple-point">Simply supported, point load at position a</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="show-moment" checked> Bending-moment diagram</label>
+          <label class="check"><input type="checkbox" id="show-callout" checked> Magnified callout</label>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">Span, depth and deflection share one scale, so the bend is usually too small to see. The supports and load arrows are symbols, not to scale. The exaggeration buttons and the magnified callout are badged on the drawing.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="L-range">Span <var>L</var></label>
+                <span class="num-field">
+                  <input type="number" id="L-num" inputmode="decimal" aria-label="Span L, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="L-range">
+              <div class="range-hint" aria-hidden="true"><span>20 mm</span><span>log scale</span><span>3 m</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="P-range" id="P-label">Point load <var>P</var></label>
+                <span class="num-field">
+                  <input type="number" id="P-num" inputmode="decimal" aria-label="Load, newtons">
+                  <span class="unit" aria-hidden="true">N</span>
+                </span>
+              </div>
+              <input type="range" id="P-range" aria-describedby="P-note">
+              <div class="range-hint" aria-hidden="true"><span>0.01 N</span><span>log scale</span><span>50 kN</span></div>
+              <p class="control-note muted" id="P-note">–</p>
+            </div>
+
+            <div class="control" id="a-control" hidden>
+              <div class="control-head">
+                <label for="a-range">Load position <var>a</var></label>
+                <span class="num-field">
+                  <input type="number" id="a-num" inputmode="decimal" aria-label="Load position a from the left support, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="a-range">
+              <div class="range-hint" aria-hidden="true"><span>left support</span><span id="a-max">right support</span></div>
+            </div>
+
+            <div class="control-row">
+              <label class="check"><input type="checkbox" id="self-weight"> Include self-weight</label>
+              <span class="muted small" id="sw-note">–</span>
+            </div>
+
+            <div class="presets">
+              <h3>Presets</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="shelfShort">Short shelf: 500 mm pine board, 20 kg in the middle</button></li>
+                <li><button type="button" class="btn" data-preset="bookshelf">Bookshelf: 1 m pine board, 20 kg in the middle</button></li>
+                <li><button type="button" class="btn" data-preset="onEdge">Same board on edge</button></li>
+                <li><button type="button" class="btn" data-preset="rule">Steel rule held off a table edge</button></li>
+                <li><button type="button" class="btn" data-preset="aluBox">Aluminium 40 &times; 40 &times; 2 box, 1 m, 10 kg</button></li>
+                <li><button type="button" class="btn" data-preset="desk">Desk top on trestles, 15 kg</button></li>
+                <li><button type="button" class="btn" data-preset="acrylic">Acrylic shelf, 5 kg spread</button></li>
+                <li><button type="button" class="btn" data-preset="ipe">Steel IPE 100 near yield: 1 m, 4 tonnes</button></li>
+              </ul>
+              <p class="control-note muted" id="preset-note"></p>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <div class="control-row">
+              <label for="section-select">Section</label>
+              <select id="section-select">
+                <option value="rect" selected>Solid rectangle</option>
+                <option value="round">Solid round bar</option>
+                <option value="tube">Round tube</option>
+                <option value="rhs">Rectangular hollow section</option>
+                <option value="i">I-section (simplified)</option>
+              </select>
+            </div>
+
+            <div class="control" data-section="rect">
+              <div class="control-head">
+                <label for="rect-b-range">Width <var>b</var></label>
+                <span class="num-field"><input type="number" id="rect-b-num" inputmode="decimal" aria-label="Width b, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="rect-b-range">
+            </div>
+            <div class="control" data-section="rect">
+              <div class="control-head">
+                <label for="rect-h-range">Depth <var>h</var> (vertical)</label>
+                <span class="num-field"><input type="number" id="rect-h-num" inputmode="decimal" aria-label="Depth h, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="rect-h-range">
+            </div>
+
+            <div class="control" data-section="round">
+              <div class="control-head">
+                <label for="round-d-range">Diameter <var>d</var></label>
+                <span class="num-field"><input type="number" id="round-d-num" inputmode="decimal" aria-label="Diameter d, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="round-d-range">
+            </div>
+
+            <div class="control" data-section="tube">
+              <div class="control-head">
+                <label for="tube-D-range">Outside diameter <var>D</var></label>
+                <span class="num-field"><input type="number" id="tube-D-num" inputmode="decimal" aria-label="Outside diameter D, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="tube-D-range">
+            </div>
+            <div class="control" data-section="tube">
+              <div class="control-head">
+                <label for="tube-t-range">Wall <var>t</var></label>
+                <span class="num-field"><input type="number" id="tube-t-num" inputmode="decimal" aria-label="Wall thickness t, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="tube-t-range">
+            </div>
+
+            <div class="control" data-section="rhs">
+              <div class="control-head">
+                <label for="rhs-B-range">Width <var>B</var></label>
+                <span class="num-field"><input type="number" id="rhs-B-num" inputmode="decimal" aria-label="Width B, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="rhs-B-range">
+            </div>
+            <div class="control" data-section="rhs">
+              <div class="control-head">
+                <label for="rhs-H-range">Depth <var>H</var> (vertical)</label>
+                <span class="num-field"><input type="number" id="rhs-H-num" inputmode="decimal" aria-label="Depth H, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="rhs-H-range">
+            </div>
+            <div class="control" data-section="rhs">
+              <div class="control-head">
+                <label for="rhs-t-range">Wall <var>t</var></label>
+                <span class="num-field"><input type="number" id="rhs-t-num" inputmode="decimal" aria-label="Wall thickness t, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="rhs-t-range">
+              <p class="control-note muted">Sharp corners: real tubes have rounded corners and are a little less stiff.</p>
+            </div>
+
+            <div class="control" data-section="i">
+              <div class="control-head">
+                <label for="i-bf-range">Flange width <var>b<sub>f</sub></var></label>
+                <span class="num-field"><input type="number" id="i-bf-num" inputmode="decimal" aria-label="Flange width, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="i-bf-range">
+            </div>
+            <div class="control" data-section="i">
+              <div class="control-head">
+                <label for="i-h-range">Depth <var>h</var></label>
+                <span class="num-field"><input type="number" id="i-h-num" inputmode="decimal" aria-label="Overall depth h, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="i-h-range">
+            </div>
+            <div class="control" data-section="i">
+              <div class="control-head">
+                <label for="i-tf-range">Flange thickness <var>t<sub>f</sub></var></label>
+                <span class="num-field"><input type="number" id="i-tf-num" inputmode="decimal" aria-label="Flange thickness, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="i-tf-range">
+            </div>
+            <div class="control" data-section="i">
+              <div class="control-head">
+                <label for="i-tw-range">Web thickness <var>t<sub>w</sub></var></label>
+                <span class="num-field"><input type="number" id="i-tw-num" inputmode="decimal" aria-label="Web thickness, millimetres"><span class="unit" aria-hidden="true">mm</span></span>
+              </div>
+              <input type="range" id="i-tw-range">
+              <p class="control-note muted" id="i-note">Simplified: no root radii between web and flanges.</p>
+            </div>
+
+            <div class="control-row">
+              <label for="material-select">Material</label>
+              <select id="material-select"></select>
+            </div>
+            <p class="control-note muted beam-material" id="material-note">–</p>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>Maximum deflection <var>&delta;</var></dt>
+                <dd><b data-out="delta">–</b> mm <span class="sub">= <span data-out="deltaUm">–</span> &micro;m = <span data-out="deltaPx">–</span> px at true size</span></dd>
+                <dd class="sub" data-out="where">–</dd>
+              </div>
+              <div class="readout">
+                <dt>End slope <var>&theta;</var></dt>
+                <dd><b data-out="slope">–</b>&deg;</dd>
+                <dd class="sub" data-out="slopeSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Span / deflection</dt>
+                <dd><b data-out="ratio">–</b></dd>
+                <dd class="sub">no limit applied</dd>
+              </div>
+              <div class="readout">
+                <dt>Max bending moment <var>M</var></dt>
+                <dd><b data-out="M">–</b> N&middot;m</dd>
+                <dd class="sub" data-out="Mwhere">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Max bending stress <var>&sigma;</var></dt>
+                <dd><b data-out="sigma">–</b> MPa</dd>
+                <dd class="sub">&sigma; = M&middot;c / I</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Stress as a share of the <span data-out="strengthName">yield strength</span></dt>
+                <dd><b data-out="pct">–</b> % <span class="sub">(<span data-out="strength">–</span> MPa)</span></dd>
+                <dd class="sub">For interest only, not a design check.</dd>
+              </div>
+              <div class="readout">
+                <dt>Second moment of area <var>I</var></dt>
+                <dd><b data-out="I">–</b> mm<sup>4</sup></dd>
+                <dd class="sub"><span data-out="Icm">–</span> cm<sup>4</sup> &middot; <var>Z</var> = <span data-out="Z">–</span> mm<sup>3</sup></dd>
+              </div>
+              <div class="readout">
+                <dt>Bending stiffness <var>EI</var></dt>
+                <dd><b data-out="EI">–</b> N&middot;m<sup>2</sup></dd>
+                <dd class="sub">area <span data-out="A">–</span> mm<sup>2</sup></dd>
+              </div>
+            </dl>
+            <p class="result result--warn" id="warn-line" aria-live="polite"></p>
+            <div class="notice" role="note">
+              <p><strong>A teaching tool, not a design check:</strong> no safety factors, no buckling, shear deflection, local effects or connection design. Use a qualified engineer and the relevant code for real structures.</p>
+            </div>
+            <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Formulas for the beam you picked, with your values plugged in. Deflection and moment formulas: American Wood Council Design Aid No. 6, figure numbers given below. Slopes are the derivatives of the same deflection curves.</p>
+      <ol class="equations">
+        <li data-case="cantilever-end">
+          <span class="eq">&delta;<sub>max</sub> = P L<sup>3</sup> / 3 E I</span>
+          <span class="eq-note">At the free end (AWC Figure 13). <span data-eq="deltaLoad">–</span></span>
+        </li>
+        <li data-case="cantilever-end">
+          <span class="eq">M<sub>max</sub> = P L, &nbsp;&theta; = P L<sup>2</sup> / 2 E I</span>
+          <span class="eq-note">Moment at the wall, slope at the free end. <span data-eq="mLoad">–</span></span>
+        </li>
+        <li data-case="cantilever-udl">
+          <span class="eq">&delta;<sub>max</sub> = w L<sup>4</sup> / 8 E I</span>
+          <span class="eq-note">At the free end (AWC Figure 12), w = W / L. <span data-eq="deltaLoad">–</span></span>
+        </li>
+        <li data-case="cantilever-udl">
+          <span class="eq">M<sub>max</sub> = w L<sup>2</sup> / 2, &nbsp;&theta; = w L<sup>3</sup> / 6 E I</span>
+          <span class="eq-note">Moment at the wall, slope at the free end. <span data-eq="mLoad">–</span></span>
+        </li>
+        <li data-case="simple-centre">
+          <span class="eq">&delta;<sub>max</sub> = P L<sup>3</sup> / 48 E I</span>
+          <span class="eq-note">At mid-span (AWC Figure 7). <span data-eq="deltaLoad">–</span></span>
+        </li>
+        <li data-case="simple-centre">
+          <span class="eq">M<sub>max</sub> = P L / 4, &nbsp;&theta; = P L<sup>2</sup> / 16 E I</span>
+          <span class="eq-note">Moment under the load, slope at each support. <span data-eq="mLoad">–</span></span>
+        </li>
+        <li data-case="simple-udl">
+          <span class="eq">&delta;<sub>max</sub> = 5 w L<sup>4</sup> / 384 E I</span>
+          <span class="eq-note">At mid-span (AWC Figure 1), w = W / L. <span data-eq="deltaLoad">–</span></span>
+        </li>
+        <li data-case="simple-udl">
+          <span class="eq">M<sub>max</sub> = w L<sup>2</sup> / 8, &nbsp;&theta; = w L<sup>3</sup> / 24 E I</span>
+          <span class="eq-note">Moment at mid-span, slope at each support. <span data-eq="mLoad">–</span></span>
+        </li>
+        <li data-case="simple-point">
+          <span class="eq">&delta;<sub>x</sub> = P b x (L<sup>2</sup> &minus; b<sup>2</sup> &minus; x<sup>2</sup>) / 6 E I L</span>
+          <span class="eq-note">For x &lt; a, with b = L &minus; a; the mirror formula applies beyond the load (AWC Figure 8). Under the load: &delta;<sub>a</sub> = P a<sup>2</sup> b<sup>2</sup> / 3 E I L. <span data-eq="deltaA">–</span></span>
+        </li>
+        <li data-case="simple-point">
+          <span class="eq">&delta;<sub>max</sub> = P a b (a + 2b) &radic;(3a(a + 2b)) / 27 E I L</span>
+          <span class="eq-note">At x = &radic;(a(a + 2b) / 3) when a &gt; b (measure from the other end when a &lt; b). <span data-eq="deltaLoad">–</span></span>
+        </li>
+        <li data-case="simple-point">
+          <span class="eq">M<sub>max</sub> = P a b / L</span>
+          <span class="eq-note">Under the load (AWC Figure 8). <span data-eq="mLoad">–</span></span>
+        </li>
+        <li data-selfweight>
+          <span class="eq">w<sub>self</sub> = &rho; A g<sub>0</sub>, &nbsp;&delta; = &delta;<sub>load</sub> + &delta;<sub>self</sub></span>
+          <span class="eq-note"><span data-eq="self">–</span></span>
+        </li>
+        <li data-section="rect">
+          <span class="eq">I = b h<sup>3</sup> / 12</span>
+          <span class="eq-note"><span data-eq="I">–</span></span>
+        </li>
+        <li data-section="round">
+          <span class="eq">I = &pi; d<sup>4</sup> / 64</span>
+          <span class="eq-note"><span data-eq="I">–</span></span>
+        </li>
+        <li data-section="tube">
+          <span class="eq">I = &pi; (D<sup>4</sup> &minus; d<sub>i</sub><sup>4</sup>) / 64, &nbsp;d<sub>i</sub> = D &minus; 2t</span>
+          <span class="eq-note"><span data-eq="I">–</span></span>
+        </li>
+        <li data-section="rhs">
+          <span class="eq">I = (B H<sup>3</sup> &minus; b<sub>i</sub> h<sub>i</sub><sup>3</sup>) / 12</span>
+          <span class="eq-note">Inside b<sub>i</sub> = B &minus; 2t, h<sub>i</sub> = H &minus; 2t. <span data-eq="I">–</span></span>
+        </li>
+        <li data-section="i">
+          <span class="eq">I = (b<sub>f</sub> h<sup>3</sup> &minus; (b<sub>f</sub> &minus; t<sub>w</sub>)(h &minus; 2t<sub>f</sub>)<sup>3</sup>) / 12</span>
+          <span class="eq-note">The rectangle minus the two gaps beside the web; no root radii. <span data-eq="I">–</span></span>
+        </li>
+        <li>
+          <span class="eq">&sigma; = M c / I = M / Z</span>
+          <span class="eq-note">c is the distance from the middle of the section to its top or bottom face. <span data-eq="sigma">–</span></span>
+        </li>
+        <li>
+          <span class="eq">pixels = metres &times; scale</span>
+          <span class="eq-note"><span data-eq="px">–</span></span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Beam deflection, explained</h2>
+
+        <h3>Stiffness is E times I</h3>
+        <p>How far a beam bends depends on two numbers multiplied together. <var>E</var>, the modulus of elasticity, belongs to the material: steel's is about <span data-calc="steelAlu">three</span> times aluminium's and about <span data-calc="steelWood">19</span> times that of softwood along the grain. <var>I</var>, the second moment of area, belongs to the shape of the cross-section. Every deflection formula divides by <var>EI</var>, so doubling either one halves the bend.</p>
+
+        <h3>Why depth matters so much</h3>
+        <p>For a rectangle <span class="eq-inline">I = b h<sup>3</sup> / 12</span>: the depth is cubed. Turn the 250 &times; 18&nbsp;mm shelf board on its edge and it becomes <span data-calc="edgeRatio">193</span> times stiffer, with exactly the same wood. That is why joists stand on edge and why I-beams put their material in flanges far from the middle. Span matters even more: a point load's deflection grows with <var>L</var><sup>3</sup>, so a shelf twice as long sags eight times as far.</p>
+
+        <h3>The 1:1 lesson</h3>
+        <p>Load an IPE&nbsp;100 steel beam spanning 1&nbsp;m with 4 tonnes at mid-span and the bending stress reaches about <span data-calc="ipePct">85</span>% of the yield strength. It sags only about <span data-calc="ipeDelta">2.5</span>&nbsp;mm: around <span data-calc="ipePx">9</span> pixels on a 24-inch 1080p monitor. A beam close to yielding may move only a millimetre or two. Most of the sagging you notice in real life comes from much longer spans or heavier loads, or from creep: timber and plastics keep bending slowly under a load left for months. The acrylic maker, for example, gives a short-term tensile strength of <span data-calc="pmmaStrength">80</span>&nbsp;MPa but a maximum long-term stress of only <span data-calc="pmmaLong">5 to 10</span>&nbsp;MPa.</p>
+
+        <h3>Worked example</h3>
+        <p>A 1&nbsp;m pine shelf board, 250&nbsp;mm deep and 18&nbsp;mm thick, rests on supports at its ends with 20&nbsp;kg of books in the middle. The load is <span class="eq-inline">P = 20 &times; 9.80665 = <span data-calc="weP">196</span> N</span>. The section has <span class="eq-inline">I = 250 &times; 18<sup>3</sup> / 12 = <span data-calc="weI">121,500</span> mm<sup>4</sup></span>, and C24 softwood has <span class="eq-inline">E = <span data-calc="weE">11</span> GPa</span>. So <span class="eq-inline">&delta; = P L<sup>3</sup> / 48 E I = <span data-calc="weDelta">3.06</span> mm</span>, about L/<span data-calc="weRatio">327</span>. The moment is <span class="eq-inline">P L / 4 = <span data-calc="weM">49</span> N&middot;m</span> and the stress <span class="eq-inline">M c / I = <span data-calc="weSigma">3.63</span> MPa</span>, about <span data-calc="wePct">15</span>% of the timber's characteristic bending strength. Halve the span to 500&nbsp;mm and the sag falls to <span data-calc="weHalf">0.38</span>&nbsp;mm.</p>
+
+        <h3>What is approximate</h3>
+        <p>The formulas are the standard Euler&ndash;Bernoulli ones: small deflections, a linear elastic material, plane sections staying plane, no shear deformation, and ideal supports (a perfectly rigid wall, frictionless pins and rollers). They ignore creep, temperature, holes, joints and connections, local crushing under the load, and every kind of buckling. Timber values are for a strength class, not your piece of wood, and a furniture board is not strength graded at all. Material values are typical or minimum figures from datasheets. The simplified I-section has no root fillets, so it gives <span data-calc="ipeI">163</span>&nbsp;cm<sup>4</sup> for an IPE&nbsp;100 against the tabulated 171&nbsp;cm<sup>4</sup>. The page warns when the deflection passes a tenth of the span (the formulas assume small deflections) or when the stress passes the material's strength.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Structures books and hands-on kits. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: structures book</li>
+            <li class="affiliate-placeholder">Affiliate link slot: dial indicator</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Deflection, slope and moment formulas: American Wood Council, <a href="https://web-media.awc.org/wp-content/uploads/2021/12/17210710/AWC-DA6-BeamFormulas-0710.pdf">Beam Design Formulas with Shear and Moment Diagrams</a>, Design Aid No.&nbsp;6 (2005 edition), Figures 1, 7, 8, 12 and 13. End slopes are the derivatives of those deflection curves.</li>
+        <li>Section properties: rectangle, circle, annulus and hollow rectangle from <a href="https://en.wikipedia.org/wiki/List_of_second_moments_of_area">List of second moments of area</a> (Wikipedia, citing eFunda and Roark); the I-section by the same subtraction. All five are checked against numerical integration in the page's tests.</li>
+        <li>Steel S275 and S355: modulus of elasticity and minimum yield strengths (BS EN 10025-2) from SteelConstruction.info, <a href="https://www.steelconstruction.info/Steel_material_properties">Steel material properties</a>; density 7850&nbsp;kg/m<sup>3</sup> from the ArcelorMittal Orange Book <a href="https://orangebook.arcelormittal.com/explanatory-notes/long-products/dimensions-of-sections">explanatory notes</a>.</li>
+        <li>Stainless steel 304 and aluminium 6082-T6 and 6061-T6: Aalco datasheets for <a href="https://www.aalco.co.uk/datasheets/Stainless-Steel-14301-304-Sheet-and-Plate-Quarto-Plate--CPP-Plate_343.ashx">1.4301 (304) sheet and plate</a>, <a href="https://www.aalco.co.uk/datasheets/Aluminium-Alloy-6082-T6-Extrusions_338.ashx">6082-T6 extrusions</a> and <a href="https://www.aalco.co.uk/datasheets/Aluminium-Alloy-6061-T6-Extrusions_145.ashx">6061-T6 extrusions</a>.</li>
+        <li>Softwood C24: EN 338:2016 Table 1 (mean E along the grain, mean density, characteristic bending strength), as transcribed by the open-source <a href="https://blueprints.readthedocs.io/en/stable/API%20reference/codes/eurocode/en_338_2016/chapter_5_classification_of_structural_timber/table_1/">Blueprints project</a>.</li>
+        <li>Acrylic: PLEXIGLAS GS <a href="https://www.voskunststoffen.nl/files/166151/datasheet%20plexiglas%20XT%20GS.pdf">technical information 211-1</a> (POLYVANTIS / R&ouml;hm, 04/25): density, short-term modulus, tensile strength and maximum long-term stress.</li>
+        <li>Preset sizes: <a href="https://www.axminstertools.com/shinwa-stainless-steel-rule-ax1054062">Shinwa 300&nbsp;mm rule</a> (25 &times; 1&nbsp;mm), <a href="https://jtdove.co.uk/products/internal-softwood-pine-furniture-board-2350-x-250-x-18mm">pine furniture board</a> (250 &times; 18&nbsp;mm), <a href="https://diy.com/departments/laminated-pine-board-18mm-1150x500-shelves-cupboards-general-purpose-pb10/5055170305191_BQ.prd">laminated pine board</a> (1150 &times; 500 &times; 18&nbsp;mm), <a href="https://www.themetalstore.co.uk/products/aluminium-box-section-2mm-thick">aluminium box section</a> (40 &times; 40 &times; 2&nbsp;mm, 6082), and the IPE&nbsp;100 from the ArcelorMittal Orange Book <a href="https://orangebook.arcelormittal.com/node/6">IPE section table</a>. The loads in the presets are illustrative.</li>
+        <li>Mass to weight uses standard gravity g<sub>0</sub> = 9.80665&nbsp;m/s<sup>2</sup> (exact by definition).</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

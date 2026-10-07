@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>motion-profile-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>motion-profile-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/motion-profile.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as M from '../js/motion-profile-model.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const rel = (a, b, eps) => Math.abs(a - b) <= eps * Math.abs(b);
+
+    // ---------- Trapezoid: hand-worked cases ----------
+    {
+      const p = M.trapezoid(0.05, 2, 10);
+      check('trapezoid 50 mm, 2 m/s, 10 m/s²: triangular (never reaches 2 m/s)', !p.vReached && p.Tv === 0);
+      check('  move time 2√(d/a) = 141.42 ms', near(p.T, 2 * Math.sqrt(0.005)) && Math.abs(p.T - 0.141421) < 1e-6);
+      check('  peak speed √(a·d) = 0.7071 m/s (35% of 2 m/s)', near(p.vPeak, Math.sqrt(0.5)) && Math.round((100 * p.vPeak) / 2) === 35);
+      const p2 = M.trapezoid(1.5, 2, 10);
+      check('trapezoid 1.5 m, 2 m/s, 10 m/s²: T = d/v + v/a = 0.95 s, cruise 0.55 s', near(p2.T, 0.95) && near(p2.Tv, 0.55) && p2.vReached);
+      const p3 = M.trapezoid(1, 1, 1);
+      check('trapezoid exactly at break-even (d = v²/a): T = 2 s, no cruise', near(p3.T, 2) && near(p3.Tv, 0) && near(p3.vPeak, 1));
+      check('break-even trapezoid = v²/a: 2 m/s, 10 m/s² → 0.4 m', near(M.breakEvenTrapezoid(2, 10), 0.4));
+      check('trapezoid decel distance = v²/2a (PMD): 2 m/s at 10 m/s² → 0.2 m',
+        near(p2.d - M.evalProfile(p2, p2.T - p2.Ta).p, 0.2));
+      check('trapezoid: doubling a on the 50 mm move saves 41.4 ms', near(M.savingFrom('trapezoid', 0.05, 2, 10, 0, 'a'), 0.141421356 - 0.1, 1e-8));
+      check('trapezoid: doubling v on the 50 mm move saves nothing', M.savingFrom('trapezoid', 0.05, 2, 10, 0, 'v') === 0);
+      check('triangular move: doubling a cuts the time by 1 − 1/√2 = 29%',
+        near(M.savingFrom('trapezoid', 0.05, 2, 10, 0, 'a') / p.T, 1 - Math.SQRT1_2) && Math.round(100 * (1 - Math.SQRT1_2)) === 29);
+      check('"about 1 g": 10 m/s² = 1.02 g', Math.round((10 / 9.80665) * 100) === 102);
+    }
+
+    // ---------- S-curve: hand-worked cases (all four limit cases) ----------
+    {
+      const s1 = M.sCurve(2, 1, 1, 10);
+      check('S-curve both limits: d=2, v=1, a=1, j=10 → Tj=0.1, Ta=1.1, Tv=0.9, T=3.1 s',
+        near(s1.Tj, 0.1) && near(s1.Ta, 1.1) && near(s1.Tv, 0.9) && near(s1.T, 3.1) && M.limitCase(s1) === 'both');
+      const s2 = M.sCurve(1, 10, 1, 10);
+      check('S-curve a reached, v not: d=1, v=10, a=1, j=10 → Ta = 0.05 + √1.0025, T = 2.1025 s',
+        near(s2.Ta, 0.05 + Math.sqrt(1.0025)) && Math.abs(s2.T - 2.1024984) < 1e-6 && M.limitCase(s2) === 'acceleration');
+      check('  peak speed a·(Ta − Tj) = 0.95125 m/s', Math.abs(s2.vPeak - 0.9512492) < 1e-6);
+      const s3 = M.sCurve(0.01, 10, 100, 100);
+      check('S-curve neither limit: d=10 mm, j=100 → Tj = (d/2j)^⅓ = 36.84 ms, T = 4·Tj',
+        near(s3.Tj, Math.cbrt(0.01 / 200)) && near(s3.T, 4 * s3.Tj) && M.limitCase(s3) === 'neither');
+      check('  peak acceleration j·Tj = 3.684 m/s², peak speed j·Tj² = 0.1357 m/s',
+        Math.abs(s3.aPeak - 3.684031) < 1e-5 && Math.abs(s3.vPeak - 0.1357209) < 1e-6);
+      const s4 = M.sCurve(1, 0.1, 10, 1);
+      check('S-curve v reached, a not: d=1, v=0.1, a=10, j=1 → Tj=√(v/j), T = d/v + 2√(v/j)',
+        near(s4.Tj, Math.sqrt(0.1)) && near(s4.T, 10 + 2 * Math.sqrt(0.1)) && M.limitCase(s4) === 'speed');
+      check('  peak acceleration √(v·j) = 0.3162 m/s²', near(s4.aPeak, Math.sqrt(0.1)));
+    }
+
+    // ---------- Page defaults: the worked example in the explainer ----------
+    {
+      const s = M.sCurve(0.05, 2, 10, 500);
+      const t = M.trapezoid(0.05, 2, 10);
+      check('default 50 mm, 2 m/s, 10 m/s², 500 m/s³: S-curve T = 162.8 ms, peak 0.614 m/s',
+        Math.abs(s.T - 0.1628286) < 1e-6 && Math.abs(s.vPeak - 0.6141428) < 1e-6);
+      check('  S-curve is 21 ms slower than the trapezoid (141 ms)', Math.round((s.T - t.T) * 1000) === 21);
+      check('  doubling a saves 15 ms (S-curve), doubling j saves 11 ms, doubling v saves 0',
+        Math.round(M.savingFrom('scurve', 0.05, 2, 10, 500, 'a') * 1000) === 15 &&
+        Math.round(M.savingFrom('scurve', 0.05, 2, 10, 500, 'j') * 1000) === 11 &&
+        M.savingFrom('scurve', 0.05, 2, 10, 500, 'v') === 0);
+      const cT = M.cycleTime(t, 0.15, 0.15);
+      const cS = M.cycleTime(s, 0.15, 0.15);
+      check('  cycle with 0.15 s dwells: 0.583 s → 103 picks/min (trapezoid), 0.626 s → 96/min (S-curve)',
+        Math.abs(cT - 0.5828427) < 1e-6 && Math.round(M.picksPerMinute(cT)) === 103 &&
+        Math.abs(cS - 0.6256571) < 1e-6 && Math.round(M.picksPerMinute(cS)) === 96);
+      check('  break-even: trapezoid 0.4 m, S-curve 0.44 m (v²/a + v·a/j)',
+        near(M.breakEvenTrapezoid(2, 10), 0.4) && near(M.breakEvenSCurve(2, 10, 500), 0.44));
+    }
+
+    // ---------- Break-even distance really is where v_max is just reached ----------
+    {
+      let ok = true;
+      for (const [v, a, j] of [[2, 10, 500], [0.5, 50, 100], [1, 1, 10000], [3, 100, 2000]]) {
+        const dS = M.breakEvenSCurve(v, a, j);
+        if (!M.sCurve(dS * 1.0001, v, a, j).vReached || M.sCurve(dS * 0.9999, v, a, j).vReached) ok = false;
+        if (Math.abs(M.sCurve(dS, v, a, j).Tv) > 1e-9) ok = false;
+        const dT = M.breakEvenTrapezoid(v, a);
+        if (!M.trapezoid(dT * 1.0001, v, a).vReached || M.trapezoid(dT * 0.9999, v, a).vReached) ok = false;
+      }
+      check('break-even distances: just above reaches v_max, just below does not (both profiles)', ok);
+    }
+
+    // ---------- Random profiles: end state, limits, continuity, symmetry ----------
+    const rand = (lo, hi) => lo * (hi / lo) ** Math.random(); // log-uniform
+    const cases = [];
+    for (let i = 0; i < 300; i++) cases.push([rand(0.001, 2), rand(0.01, 10), rand(0.1, 200), rand(1, 1e5)]);
+    {
+      let endOk = true;
+      let limOk = true;
+      let contOk = true;
+      let symOk = true;
+      let timeOk = true;
+      for (const [d, v, a, j] of cases) {
+        for (const prof of [M.trapezoid(d, v, a), M.sCurve(d, v, a, j)]) {
+          const last = prof.segments[prof.segments.length - 1];
+          const end = M.evalProfile({ ...prof, T: Infinity }, prof.T); // the closed form at T, not the snapped value
+          // End acceleration: allow for float rounding of the end time (≈ ε·T) multiplied by the jerk,
+          // which matters for long moves with microsecond jerk phases.
+          const aTol = 1e-9 * a + 8 * Number.EPSILON * prof.T * prof.jMax;
+          if (!rel(end.p, d, 1e-9) || Math.abs(end.v) > 1e-9 * v || (prof.kind === 'scurve' && Math.abs(end.a) > aTol)) endOk = false;
+          if (!(last.t0 + last.T > 0)) endOk = false;
+          for (let k = 0; k <= 400; k++) {
+            const s = M.evalProfile(prof, (prof.T * k) / 400);
+            if (Math.abs(s.v) > v * (1 + 1e-9) || Math.abs(s.a) > a * (1 + 1e-9) || Math.abs(s.j) > prof.jMax * (1 + 1e-9)) limOk = false;
+            if (s.p < -1e-12 * d || s.p > d * (1 + 1e-9)) limOk = false;
+            // Symmetry, sampled between grid points so no sample sits exactly on the trapezoid's acceleration jump
+            const f = (k + 0.37) / 401;
+            const s1 = M.evalProfile(prof, prof.T * f);
+            const m = M.evalProfile(prof, prof.T * (1 - f));
+            if (!near(m.p, d - s1.p, 1e-7) || !near(m.v, s1.v, 1e-7) || !near(m.a, -s1.a, 1e-6)) symOk = false;
+          }
+          // Continuity across each segment boundary: the change over ±eps must be no more
+          // than the rate of change allows (p moves by ≤ v·2eps, v by ≤ a·2eps, a by ≤ j·2eps).
+          for (const seg of prof.segments) {
+            if (seg.t0 === 0) continue;
+            const eps = 1e-10 * prof.T;
+            const b = M.evalProfile(prof, seg.t0 - eps);
+            const c = M.evalProfile(prof, seg.t0 + eps);
+            if (Math.abs(b.p - c.p) > 2.01 * eps * v + 1e-12 * d || Math.abs(b.v - c.v) > 2.01 * eps * a + 1e-9 * v) contOk = false;
+            if (prof.kind === 'scurve' && Math.abs(b.a - c.a) > 2.01 * eps * j + 1e-9 * a) contOk = false;
+          }
+        }
+        if (M.sCurve(d, v, a, j).T < M.trapezoid(d, v, a).T * (1 - 1e-12)) timeOk = false;
+      }
+      check('300 random moves: closed form ends at p = d, v = 0, a = 0 (both profiles)', endOk);
+      check('300 random moves: |v| ≤ v_max, |a| ≤ a_max, |j| ≤ j_max, 0 ≤ p ≤ d throughout', limOk);
+      check('300 random moves: p and v continuous (both), a continuous (S-curve)', contOk);
+      check('300 random moves: symmetric, p(T−t) = d − p(t), v(T−t) = v(t), a(T−t) = −a(t)', symOk);
+      check('300 random moves: the S-curve is never quicker than the trapezoid', timeOk);
+    }
+
+    // ---------- Numerical integration agrees with the closed form ----------
+    {
+      let ok = true;
+      for (const [d, v, a, j] of [[0.05, 2, 10, 500], [1.5, 2, 10, 500], [0.3, 1, 30, 300], [0.002, 5, 100, 5000], [2, 0.5, 0.2, 1]]) {
+        for (const prof of [M.trapezoid(d, v, a), M.sCurve(d, v, a, j)]) {
+          const r = M.integrateProfile(prof, 100000);
+          if (!rel(r.p, d, 1e-6) || Math.abs(r.v) > 1e-9 * v + 1e-12) ok = false;
+          if (r.vMaxSeen > v * (1 + 1e-9) || r.aMaxSeen > a * (1 + 1e-9)) ok = false;
+          if (!rel(r.vMaxSeen, prof.vPeak, 1e-4)) ok = false;
+        }
+      }
+      check('integrating a(t) twice ends at d with v = 0 and the closed-form peak speed (10 cases)', ok);
+    }
+
+    // ---------- The S-curve tends to the trapezoid as j → ∞ ----------
+    {
+      let ok = true;
+      for (const [d, v, a] of [[0.05, 2, 10], [1.5, 2, 10], [0.3, 0.5, 30]]) {
+        const tr = M.trapezoid(d, v, a);
+        const errs = [1e3, 1e5, 1e7, 1e9].map((j) => M.sCurve(d, v, a, j).T - tr.T);
+        if (!(errs.every((e, i) => e >= 0 && (i === 0 || e < errs[i - 1])) && errs[3] < 1e-6 * tr.T)) ok = false;
+        if (!rel(M.sCurve(d, v, a, 1e9).vPeak, tr.vPeak, 1e-6)) ok = false;
+      }
+      check('S-curve → trapezoid as j → ∞ (time difference shrinks to < 1 ppm, same peak speed)', ok);
+      check('break-even S-curve → v²/a as j → ∞', rel(M.breakEvenSCurve(2, 10, 1e9), 0.4, 1e-6));
+    }
+
+    // ---------- Cycle helpers ----------
+    {
+      const s = M.sCurve(0.3, 2, 20, 2000);
+      const st = M.cycleState(s, s.T + 0.1 + s.T / 2, 0.2, 0.1);
+      check('cycleState: halfway back is at d/2 moving backwards', st.phase === 'back' && near(st.p, 0.15, 1e-9) && st.v < 0);
+      check('cycleState phases: out, place, back, pick, wait',
+        M.cycleState(s, 0.01, 0.2, 0.1).phase === 'out' && M.cycleState(s, s.T + 0.05, 0.2, 0.1).phase === 'place' &&
+        M.cycleState(s, 2 * s.T + 0.15, 0.2, 0.1).phase === 'pick' && M.cycleState(s, 2 * s.T + 0.35, 0.2, 0.1).phase === 'wait');
+      const pts = M.cycleSeries(s, 'p', 0.2, 0.1, 2);
+      check('cycleSeries: position starts at 0, reaches d, ends at 0 at tEnd', pts[0][1] === 0 && pts.some(([, y]) => near(y, 0.3)) && pts[pts.length - 1][0] === 2 && pts[pts.length - 1][1] === 0);
+      check('picks per minute = 60 / cycle: 0.5 s → 120/min', M.picksPerMinute(0.5) === 120);
+      check('ramp time = 2·Ta: trapezoid 1.5 m at 2 m/s, 10 m/s² → 0.4 s', near(M.rampTime(M.trapezoid(1.5, 2, 10)), 0.4));
+    }
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`motion-profile-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Motion Profile &amp; Cycle Time: Trapezoidal vs S-Curve Pick-and-Place | Real-Scale Physics</title>
+  <meta name="description" content="Set a move distance, speed, acceleration and jerk, and compare trapezoidal and S-curve motion profiles at true scale. Live position, velocity and acceleration graphs show why short moves never reach top speed, with cycle time and picks per minute.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/motion-profile.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Motion profiles and pick-and-place cycle time">
+  <meta property="og:description" content="Trapezoidal vs S-curve moves at true scale: why short moves never reach top speed, and what really sets the picks per minute.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/motion-profile.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/motion-profile.js"></script>
+</head>
+<body class="page-motion-profile">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Engineering</p>
+      <h1>Motion profiles and pick-and-place cycle time</h1>
+      <p class="lead">Set a move distance and your axis limits for speed, acceleration and jerk, then watch a trapezoidal and an S-curve move side by side at true scale. On short moves the top speed is rarely reached, so the speed limit barely matters: acceleration and jerk set the cycle time.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">One lane per profile, both starting together each cycle. Graphs: one pick-and-place cycle of each.</p>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Motion profile simulation"></canvas>
+          <span class="time-badge" id="time-badge">REAL TIME 1:1</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Pause</button>
+          <button type="button" class="btn" id="restart-btn">Restart cycle</button>
+          <fieldset class="segmented segmented--small">
+            <legend class="visually-hidden">Time scale</legend>
+            <input type="radio" name="timescale" id="ts-1" value="1" checked>
+            <label for="ts-1">1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.5" value="0.5">
+            <label for="ts-0.5">0.5&times;</label>
+            <input type="radio" name="timescale" id="ts-0.1" value="0.1">
+            <label for="ts-0.1">0.1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.01" value="0.01">
+            <label for="ts-0.01">0.01&times;</label>
+          </fieldset>
+          <label class="check"><input type="checkbox" id="jerk-check"> Jerk graph</label>
+        </div>
+        <p class="result" id="result" aria-live="polite"></p>
+        <p class="sim-hint muted" id="sim-hint">Press <kbd>Space</kbd> to play or pause. The dots are not to scale; the move distance and the speeds are. The quicker profile finishes first and waits for the other.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="d-range">Move distance <var>d</var></label>
+                <span class="num-field">
+                  <input type="number" id="d-num" inputmode="decimal" aria-label="Move distance d, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="d-range">
+              <div class="range-hint" aria-hidden="true"><span>1 mm</span><span>log scale</span><span>2 m</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="v-range">Speed limit <var>v</var><sub>max</sub></label>
+                <span class="num-field">
+                  <input type="number" id="v-num" inputmode="decimal" aria-label="Speed limit v max, metres per second">
+                  <span class="unit" aria-hidden="true">m/s</span>
+                </span>
+              </div>
+              <input type="range" id="v-range">
+              <div class="range-hint" aria-hidden="true"><span>0.01</span><span>log scale</span><span>10 m/s</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="a-range">Acceleration limit <var>a</var><sub>max</sub></label>
+                <span class="num-field">
+                  <input type="number" id="a-num" inputmode="decimal" aria-label="Acceleration limit a max, metres per second squared">
+                  <span class="unit" aria-hidden="true">m/s²</span>
+                </span>
+              </div>
+              <input type="range" id="a-range">
+              <div class="range-hint" aria-hidden="true"><span>0.1</span><span id="a-alt"></span><span>200 m/s²</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="j-range">Jerk limit <var>j</var><sub>max</sub> (S-curve)</label>
+                <span class="num-field">
+                  <input type="number" id="j-num" inputmode="decimal" aria-label="Jerk limit j max for the S-curve, metres per second cubed">
+                  <span class="unit" aria-hidden="true">m/s³</span>
+                </span>
+              </div>
+              <input type="range" id="j-range">
+              <div class="range-hint" aria-hidden="true"><span>1</span><span id="j-alt"></span><span>100,000 m/s³</span></div>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="pick-range">Pick dwell</label>
+                <span class="num-field">
+                  <input type="number" id="pick-num" inputmode="decimal" aria-label="Pick dwell time, seconds">
+                  <span class="unit" aria-hidden="true">s</span>
+                </span>
+              </div>
+              <input type="range" id="pick-range">
+              <div class="range-hint" aria-hidden="true"><span>0</span><span>2 s</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="place-range">Place dwell</label>
+                <span class="num-field">
+                  <input type="number" id="place-num" inputmode="decimal" aria-label="Place dwell time, seconds">
+                  <span class="unit" aria-hidden="true">s</span>
+                </span>
+              </div>
+              <input type="range" id="place-range">
+              <div class="range-hint" aria-hidden="true"><span>0</span><span>2 s</span></div>
+              <p class="control-note muted">One cycle = move out + place dwell + move back + pick dwell.</p>
+            </div>
+
+            <div class="presets">
+              <h3>Examples (illustrative, not from a particular machine)</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="short">Short pick 50 mm</button></li>
+                <li><button type="button" class="btn" data-preset="transfer">Typical transfer 300 mm</button></li>
+                <li><button type="button" class="btn" data-preset="gantry">Long 1.5 m gantry move</button></li>
+              </ul>
+            </div>
+            <div class="presets">
+              <h3>What helps?</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="doubleV">Double the speed limit</button></li>
+                <li><button type="button" class="btn" data-preset="doubleA">Double the acceleration</button></li>
+                <li><button type="button" class="btn" data-preset="doubleJ">Double the jerk</button></li>
+              </ul>
+            </div>
+            <p class="control-note muted">Type your own machine's limits and dwell times to sanity-check the model against the cycle times you measure.</p>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <table class="compare-table">
+              <thead>
+                <tr><th scope="col"><span class="visually-hidden">Quantity</span></th><th scope="col"><span class="key key--trap" aria-hidden="true"></span>Trapezoid</th><th scope="col"><span class="key key--s" aria-hidden="true"></span>S-curve</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Move time</th><td data-out="T-t">–</td><td data-out="T-s">–</td></tr>
+                <tr><th scope="row">Peak speed <span class="sub">(% of <var>v</var><sub>max</sub>)</span></th><td data-out="vp-t">–</td><td data-out="vp-s">–</td></tr>
+                <tr><th scope="row">Peak acceleration <span class="sub">(% of <var>a</var><sub>max</sub>)</span></th><td data-out="ap-t">–</td><td data-out="ap-s">–</td></tr>
+                <tr><th scope="row">Cruise at <var>v</var><sub>max</sub></th><td data-out="Tv-t">–</td><td data-out="Tv-s">–</td></tr>
+                <tr><th scope="row">Accelerating + braking</th><td data-out="Ta-t">–</td><td data-out="Ta-s">–</td></tr>
+                <tr class="is-key"><th scope="row">Cycle time</th><td data-out="cyc-t">–</td><td data-out="cyc-s">–</td></tr>
+                <tr class="is-key"><th scope="row">Picks per minute</th><td data-out="ppm-t">–</td><td data-out="ppm-s">–</td></tr>
+                <tr><th scope="row">Reaches <var>v</var><sub>max</sub> on moves over</th><td data-out="be-t">–</td><td data-out="be-s">–</td></tr>
+                <tr><th scope="row">Saved per move by doubling <var>v</var><sub>max</sub></th><td data-out="sv-t">–</td><td data-out="sv-s">–</td></tr>
+                <tr><th scope="row">… doubling <var>a</var><sub>max</sub></th><td data-out="sa-t">–</td><td data-out="sa-s">–</td></tr>
+                <tr><th scope="row">… doubling <var>j</var><sub>max</sub></th><td data-out="sj-t">–</td><td data-out="sj-s">–</td></tr>
+              </tbody>
+            </table>
+            <p class="control-note muted"><var>a</var><sub>max</sub> = <span data-out="g">–</span> g. The trapezoid has no jerk limit (its jerk is infinite at each corner).</p>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Exact rest-to-rest profiles, with your current values plugged in. Times are for one move.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">Trapezoid: T = d / v + v / a &nbsp;(if d &ge; v<sup>2</sup> / a)</span>
+          <span class="eq-note" data-eq="trapT">–</span>
+        </li>
+        <li>
+          <span class="eq">Triangle: T = 2 &radic;(d / a), &nbsp;v<sub>peak</sub> = &radic;(a d)</span>
+          <span class="eq-note" data-eq="trapTri">–</span>
+        </li>
+        <li>
+          <span class="eq">S-curve jerk phase: T<sub>j</sub> = a / j</span>
+          <span class="eq-note" data-eq="sTj">–</span>
+        </li>
+        <li>
+          <span class="eq">S-curve ramp T<sub>a</sub> and cruise T<sub>v</sub></span>
+          <span class="eq-note" data-eq="sTa">–</span>
+        </li>
+        <li>
+          <span class="eq">S-curve: T = 2 T<sub>a</sub> + T<sub>v</sub></span>
+          <span class="eq-note" data-eq="sT">–</span>
+        </li>
+        <li>
+          <span class="eq">Each segment: p = p<sub>0</sub> + v<sub>0</sub>t + &frac12;a<sub>0</sub>t<sup>2</sup> + &#8537;j t<sup>3</sup></span>
+          <span class="eq-note" data-eq="seg">–</span>
+        </li>
+        <li>
+          <span class="eq">Reaches v<sub>max</sub> from: d = v<sup>2</sup> / a &nbsp;(trapezoid)</span>
+          <span class="eq-note" data-eq="be">–</span>
+        </li>
+        <li>
+          <span class="eq">Cycle = 2T + t<sub>pick</sub> + t<sub>place</sub></span>
+          <span class="eq-note" data-eq="cyc">–</span>
+        </li>
+        <li>
+          <span class="eq">Picks per minute = 60 / cycle</span>
+          <span class="eq-note" data-eq="ppm">–</span>
+        </li>
+        <li>
+          <span class="eq">pixels = metres &times; scale</span>
+          <span class="eq-note" data-eq="scale">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Why short moves never reach top speed</h2>
+
+        <h3>The speed limit is a ceiling, not a target</h3>
+        <p>A point-to-point move starts and ends at rest. The axis speeds up at its acceleration limit, and it has to start braking early enough to stop on the target. Speeding up to <var>v</var> takes <span class="eq-inline">v<sup>2</sup> / 2a</span> of distance, and braking takes the same again, so a trapezoidal move only reaches its speed limit if it is longer than <span class="eq-inline">v<sup>2</sup> / a</span>. At 2&nbsp;m/s and 10&nbsp;m/s<sup>2</sup> (about 1&nbsp;g) that is <span data-calc="be">0.4&nbsp;m</span>. Anything shorter is a triangle: speed up, then straight away slow down, peaking at <span class="eq-inline">&radic;(a d)</span>.</p>
+
+        <h3>So acceleration sets the cycle time</h3>
+        <p>On a short move the time is <span class="eq-inline">2 &radic;(d / a)</span>, which does not contain the speed limit at all. Doubling the speed limit saves nothing; doubling the acceleration cuts the move time by about <span data-calc="cut">29</span>%. This is the commonest mistake in cycle-time estimates: dividing the distance by the top speed. That gives the right answer only for long moves. For a pick-and-place robot doing short hops, the acceleration (and, for S-curves, the jerk) is what you are really buying.</p>
+
+        <h3>Trapezoid or S-curve?</h3>
+        <p>A trapezoidal profile switches acceleration on and off instantly, so its jerk (the rate of change of acceleration) is infinite at every corner. Real mechanics can't follow that: the sudden change in force excites vibration in the arm, belts and gripper, and the higher the jerk, the more vibration energy and the more vibration modes are excited. An S-curve ramps the acceleration up and down at a limited jerk, giving seven phases instead of three. It is smoother, but it is never quicker: each ramp loses some time. The trade-off pays off when the vibration it avoids would otherwise add settling time at the place position.</p>
+
+        <h3>Worked example</h3>
+        <p>A 50&nbsp;mm move with limits of 2&nbsp;m/s, 10&nbsp;m/s<sup>2</sup> and 500&nbsp;m/s<sup>3</sup>. The trapezoid never gets near 2&nbsp;m/s: it peaks at <span class="eq-inline">&radic;(10 &times; 0.05)</span> = <span data-calc="vpT">0.71</span>&nbsp;m/s and takes <span data-calc="TT">141</span>&nbsp;ms. The S-curve spends <span data-calc="Tj">20</span>&nbsp;ms ramping the acceleration up and down each time, peaks at <span data-calc="vpS">0.61</span>&nbsp;m/s and takes <span data-calc="TS">163</span>&nbsp;ms. With 0.15&nbsp;s dwells at each end, a cycle is <span data-calc="cycT">0.583</span>&nbsp;s (<span data-calc="ppmT">103</span> picks per minute) for the trapezoid and <span data-calc="cycS">0.626</span>&nbsp;s (<span data-calc="ppmS">96</span> per minute) for the S-curve. Doubling the S-curve's speed limit saves nothing; doubling its acceleration saves <span data-calc="saS">15</span>&nbsp;ms per move and doubling its jerk saves <span data-calc="sjS">11</span>&nbsp;ms.</p>
+
+        <h3>Check it against your own machine</h3>
+        <p>Robot and drive data sheets give the speed, acceleration and often the jerk limits. Type them in with your measured pick and place times and compare the picks per minute with what the machine really does. If the real machine is slower, the difference is usually the things this model leaves out.</p>
+
+        <h3>What is simplified</h3>
+        <p>Every move here is a single axis moving from rest to rest along a straight line. Real robots coordinate several axes (the slowest one sets the pace), may blend moves together without stopping, and need settling time at the end of each move while vibration dies away. Motor torque limits can also mean the acceleration available falls off at higher speeds. The dwell times stand in for gripping, vacuum build-up and release.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Books on motion control and trajectory planning. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: trajectory planning textbook</li>
+            <li class="affiliate-placeholder">Affiliate link slot: motion control handbook</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Profiles: L. Biagiotti and C. Melchiorri, <a href="https://doi.org/10.1007/978-3-540-85629-0"><cite>Trajectory Planning for Automatic Machines and Robots</cite></a>, Springer, 2008: section 3.2 (trapezoidal trajectory with preassigned acceleration and velocity) and section 3.4, in particular 3.4.3 (double S trajectory with null initial and final velocities). Section titles checked against the publisher's <a href="https://link.springer.com/content/pdf/bfm:978-3-540-85629-0/1">table of contents</a>.</li>
+        <li>Segment equations, the seven S-curve phases, deceleration distance <span class="eq-inline">v<sup>2</sup> / 2a</span>, and jerk versus vibration: C. Lewin, <a href="https://www.pmdcorp.com/resources/type/articles/get/mathematics-of-motion-control-profiles-article">"Mathematics of Motion Control Profiles"</a>, Performance Motion Devices. The closed forms on this page are tested against these segment equations by numerical integration.</li>
+        <li>1&nbsp;g = 9.80665&nbsp;m/s<sup>2</sup> (standard gravity, an exact definition).</li>
+        <li>Presets and default dwell times are illustrative inputs, not data for a particular machine. All sources retrieved 7 October 2026.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rutherford Scattering at True Scale: Gold Foil at 1 cm per Atom | Real-Scale Physics</title>
+  <meta name="description" content="Fire alpha particles at a gold foil drawn at 1 cm per atom on your own screen. Scattering angles come from the Rutherford formula, and the share that bounces back is computed from the cross-section.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/rutherford.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Rutherford scattering at true scale">
+  <meta property="og:description" content="Alpha particles and a gold foil drawn at 1 cm per atom: most pass straight through, a rare few bounce back.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/rutherford.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/rutherford.js"></script>
+</head>
+<body class="page-rutherford layout-tall">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Atomic scale</p>
+      <h1>Rutherford scattering at true scale</h1>
+      <p class="lead">Alpha particles fired at a gold foil drawn at 1&nbsp;cm per atom on your calibrated screen. Almost all of them pass straight through. A rare few bounce back, turned round by a nucleus far smaller than one pixel. Every angle comes from Rutherford's formula.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">Top: the foil at 1&nbsp;cm per atom. Below: one nucleus magnified much further, and the angles counted so far.</p>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Rutherford scattering simulation"></canvas>
+          <span class="time-badge is-slow" id="motion-badge">PAUSED</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Fire beam</button>
+          <button type="button" class="btn" id="fire-10k">Fire 10,000</button>
+          <button type="button" class="btn" id="fire-1m">Fire 1,000,000 (instant, no animation)</button>
+          <button type="button" class="btn" id="reset-btn">Reset</button>
+        </div>
+        <p class="result result--warn" id="model-warn" aria-live="polite"></p>
+        <p class="sim-hint muted" id="sim-hint">Press <kbd>Space</kbd> to fire the beam or pause it. Each alpha turns once, at the nucleus it passes closest to, which can lie at any depth in the foil and in front of or behind this slice. Alpha markers are not to scale, and the motion is slowed enormously.</p>
+        <div class="notice">
+          <p><strong>A teaching model:</strong> point charges, single scattering, non-relativistic. It breaks down when alphas get close enough to touch the nucleus (higher energies or lighter nuclei, where the nuclear force joins in), and real foils add multiple scattering and energy loss.</p>
+        </div>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="e-range">Alpha energy <var>E</var></label>
+                <span class="num-field">
+                  <input type="number" id="e-num" inputmode="decimal" aria-label="Alpha particle energy, mega-electronvolts">
+                  <span class="unit" aria-hidden="true">MeV</span>
+                </span>
+              </div>
+              <input type="range" id="e-range">
+              <div class="range-hint" aria-hidden="true"><span>1 MeV</span><span>10 MeV</span></div>
+            </div>
+
+            <div class="presets">
+              <h3>Alpha sources</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="po210" data-source-label="po210">Polonium-210</button></li>
+                <li><button type="button" class="btn" data-preset="rn222" data-source-label="rn222">Radon-222</button></li>
+                <li><button type="button" class="btn" data-preset="po218" data-source-label="po218">Polonium-218</button></li>
+                <li><button type="button" class="btn" data-preset="po214" data-source-label="po214">Polonium-214</button></li>
+              </ul>
+              <p class="control-note muted">Energy of each emitter's main alpha line (NNDC NuDat). Polonium-214 is the "radium C" used by Geiger and Marsden.</p>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <div class="control-row">
+              <label for="target-select">Foil metal</label>
+              <select id="target-select">
+                <option value="gold">Gold (Z = 79)</option>
+                <option value="platinum">Platinum (Z = 78)</option>
+                <option value="silver">Silver (Z = 47)</option>
+                <option value="copper">Copper (Z = 29)</option>
+                <option value="aluminium">Aluminium (Z = 13)</option>
+              </select>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="t-range">Foil thickness <var>t</var></label>
+                <span class="num-field">
+                  <input type="number" id="t-num" inputmode="decimal" aria-label="Foil thickness, micrometres">
+                  <span class="unit" aria-hidden="true">µm</span>
+                </span>
+              </div>
+              <input type="range" id="t-range">
+              <div class="range-hint" aria-hidden="true"><span>0.1 µm</span><span>log scale</span><span>5 µm</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="rate-range">Firing rate</label>
+                <span class="num-field">
+                  <input type="number" id="rate-num" inputmode="numeric" aria-label="Firing rate, alpha particles per second">
+                  <span class="unit" aria-hidden="true">/s</span>
+                </span>
+              </div>
+              <input type="range" id="rate-range">
+              <div class="range-hint" aria-hidden="true"><span>1/s</span><span>log scale</span><span>500/s</span></div>
+              <p class="control-note muted">Alphas per second while the beam is on. Fire 10,000 adds a fast burst.</p>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <div class="presets">
+              <h3>Try</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="standard">5 MeV on 1 µm gold</button></li>
+                <li><button type="button" class="btn" data-preset="breakdown">Aluminium at 9 MeV</button></li>
+                <li><button type="button" class="btn" data-preset="gm1909">1909: platinum, radium C</button></li>
+              </ul>
+              <p class="control-note muted" id="preset-note">The 1909 preset is a rough check of Geiger and Marsden's figure (see below).</p>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="readouts-title">Readouts</h3>
+        <dl class="readouts ruth-readouts" aria-live="off">
+          <div class="readout">
+            <dt>Head-on turn-back distance <var>d</var></dt>
+            <dd><b data-out="d">–</b> fm</dd>
+            <dd class="sub" data-out="dSub">–</dd>
+          </div>
+          <div class="readout">
+            <dt>Nucleus radius <var>R</var></dt>
+            <dd><b data-out="R">–</b> fm</dd>
+            <dd class="sub" data-out="RSub">–</dd>
+          </div>
+          <div class="readout">
+            <dt>Turned back this many radii out, <var>d</var>/<var>R</var></dt>
+            <dd><b data-out="ratio">–</b></dd>
+            <dd class="sub" data-out="ratioSub">–</dd>
+          </div>
+          <div class="readout">
+            <dt>Beyond 90°, from the cross-section</dt>
+            <dd><b data-out="p90">–</b></dd>
+            <dd class="sub" data-out="p90Sub">–</dd>
+          </div>
+          <div class="readout">
+            <dt>Beyond 10°, from the cross-section</dt>
+            <dd><b data-out="p10">–</b></dd>
+            <dd class="sub" data-out="p10Sub">–</dd>
+          </div>
+          <div class="readout readout--wide">
+            <dt>Monte Carlo so far</dt>
+            <dd><b data-out="fired">0</b> fired</dd>
+            <dd class="sub"><span data-out="mc90">–</span> · <span data-out="mc10">–</span></dd>
+          </div>
+          <div class="readout">
+            <dt>Latest alpha: closest approach <var>r</var><sub>min</sub></dt>
+            <dd><b data-out="rmin">–</b></dd>
+            <dd class="sub" data-out="rminSub">Fire the beam to see one.</dd>
+          </div>
+          <div class="readout">
+            <dt>Alpha speed</dt>
+            <dd><b data-out="speed">–</b> km/s</dd>
+            <dd class="sub" data-out="speedSub">–</dd>
+          </div>
+          <div class="readout">
+            <dt>Foil</dt>
+            <dd><b data-out="layers">–</b> atoms deep</dd>
+            <dd class="sub" data-out="foilSub">–</dd>
+          </div>
+        </dl>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Rutherford's formulas with your current values. Recoil is included: each encounter is worked out in the centre-of-mass frame (with the reduced mass), then the angle is turned into the lab angle.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">e<sup>2</sup>/(4&pi;&epsilon;<sub>0</sub>) = &alpha; &#8463;c</span>
+          <span class="eq-note" data-eq="k">–</span>
+        </li>
+        <li>
+          <span class="eq">E<sub>cm</sub> = E &times; M / (M + m)</span>
+          <span class="eq-note" data-eq="ecm">–</span>
+        </li>
+        <li>
+          <span class="eq">d = zZ e<sup>2</sup> / (4&pi;&epsilon;<sub>0</sub> E<sub>cm</sub>)</span>
+          <span class="eq-note" data-eq="d">–</span>
+        </li>
+        <li>
+          <span class="eq">&theta; = 2 arctan(d / 2b)</span>
+          <span class="eq-note" data-eq="theta">–</span>
+        </li>
+        <li>
+          <span class="eq">tan &theta;<sub>lab</sub> = sin &theta; / (cos &theta; + m/M)</span>
+          <span class="eq-note" data-eq="lab">–</span>
+        </li>
+        <li>
+          <span class="eq">r<sub>min</sub> = (d/2)(1 + 1/sin(&theta;/2))</span>
+          <span class="eq-note" data-eq="rmin">–</span>
+        </li>
+        <li>
+          <span class="eq">d&sigma;/d&Omega; = (d/4)<sup>2</sup> / sin<sup>4</sup>(&theta;/2)</span>
+          <span class="eq-note" data-eq="dsdo">–</span>
+        </li>
+        <li>
+          <span class="eq">&sigma;(&gt;&theta;) = &pi; (d/2)<sup>2</sup> cot<sup>2</sup>(&theta;/2)</span>
+          <span class="eq-note" data-eq="sigma">–</span>
+        </li>
+        <li>
+          <span class="eq">n = &rho; N<sub>A</sub> / M<sub>molar</sub></span>
+          <span class="eq-note" data-eq="n">–</span>
+        </li>
+        <li>
+          <span class="eq">P(&theta; &gt; 90&deg;) = n t &sigma;(&gt;90&deg;)</span>
+          <span class="eq-note" data-eq="p">–</span>
+        </li>
+        <li>
+          <span class="eq">&pi; b<sub>max</sub><sup>2</sup> = 1 / (n t)</span>
+          <span class="eq-note" data-eq="bmax">–</span>
+        </li>
+        <li>
+          <span class="eq">N<sub>bin</sub> = N n t [&sigma;(&gt;&theta;<sub>1</sub>) &minus; &sigma;(&gt;&theta;<sub>2</sub>)]</span>
+          <span class="eq-note" data-eq="bin">–</span>
+        </li>
+        <li>
+          <span class="eq">1 cm per atom: magnification = 1 cm / (a/&radic;2)</span>
+          <span class="eq-note" data-eq="scale">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">How a gold foil revealed the nucleus</h2>
+
+        <h3>What was expected, and what was seen</h3>
+        <p>Before 1911 the leading picture of the atom was J.&nbsp;J. Thomson's "plum pudding": electrons dotted through a ball of positive charge the size of the whole atom. Spread out like that, the charge pushes only gently. Allowing for the positive charge alone, one gold atom (radius about <span data-calc="atomNm">0.144</span>&nbsp;nm) can turn a 5&nbsp;MeV alpha by at most about <span data-calc="thomsonDeg">0.02</span>&deg;, and <span data-calc="layers">3,500</span> such nudges in random directions add up to at most about <span data-calc="thomsonTotal">1</span>&deg;. Turning one round through 90&deg; or more should essentially never happen.</p>
+        <p>Geiger and Marsden found that it does. Alphas fired at a metal plate sometimes came back off the side they went in. From a platinum plate, they reported that about 1 in 8,000 came back. Rutherford's explanation in 1911 was that the positive charge sits in a tiny nucleus at the centre, which also carries almost all the mass (a gold atom's electrons add up to only <span data-calc="electronPct">0.02</span>% of it). An alpha that happens to pass very close to it feels a huge push and can be turned right round. In 1913 Geiger and Marsden counted over 100,000 flashes of scattered alphas in all. With gold and silver foils, at angles from 5&deg; to 150&deg;, the numbers fell as 1/sin<sup>4</sup>(&theta;/2), just as Rutherford predicted.</p>
+
+        <h3>Why most alphas go straight through</h3>
+        <p>An atom is almost all empty space as far as an alpha is concerned. The gold nucleus is about <span data-calc="nucleusFm">7</span>&nbsp;fm (femtometres, 10<sup>&minus;15</sup>&nbsp;m) in radius, while the atoms are <span data-calc="spacingNm">0.288</span>&nbsp;nm apart, so the nucleus fills about one part in <span data-calc="volFrac">12 trillion</span> of the space each atom has. At 1&nbsp;cm per atom, as in the drawing, the nucleus would be <span data-calc="nucleusScreen">0.5</span>&nbsp;&micro;m across: far smaller than one pixel. The electrons are too light to turn an alpha by much. So an alpha usually passes every nucleus at a respectful distance and is nudged by a degree or so at most.</p>
+
+        <h3>Turned back 45&nbsp;fm out</h3>
+        <p>Fire an alpha straight at a nucleus and it slows as the electric repulsion builds, stops, and comes back. It stops where all its kinetic energy has become electrical potential energy, the distance <span class="eq-inline">d = zZe<sup>2</sup>/(4&pi;&epsilon;<sub>0</sub>E)</span>. For a 5&nbsp;MeV alpha (charge z&nbsp;=&nbsp;2) and gold (Z&nbsp;=&nbsp;79) that is <span data-calc="dFixed">45.5</span>&nbsp;fm if the nucleus stays put, or <span data-calc="dCm">46.4</span>&nbsp;fm allowing for the small recoil of the gold nucleus. The nucleus' edge is at about <span data-calc="nucleusFm2">7.0</span>&nbsp;fm (a uniform sphere with the measured rms charge radius of <span data-calc="rmsFm">5.44</span>&nbsp;fm), so the alpha is turned back <span data-calc="ratio">6.6</span> times further out than the edge. It is repelled before it ever touches, which is why Rutherford's point-charge formula works so well for gold.</p>
+        <p>Alphas that miss by an impact parameter <var>b</var> follow a hyperbola and are turned through <span class="eq-inline">&theta; = 2 arctan(d/2b)</span>. Aim at <var>b</var>&nbsp;=&nbsp;<var>d</var>/2, about <span data-calc="b90">23</span>&nbsp;fm, and the alpha turns through 90&deg;. Miss by just one picometre, under 1% of the gap between atoms, and it turns by only about <span data-calc="theta1pm">2.7</span>&deg;.</p>
+
+        <h3>The cross-section</h3>
+        <p>To turn by more than an angle <var>&theta;</var>, an alpha has to arrive within <span class="eq-inline">b(&theta;) = (d/2) cot(&theta;/2)</span> of a nucleus: inside a small target disc of area <span class="eq-inline">&sigma;(&gt;&theta;) = &pi;(d/2)<sup>2</sup>cot<sup>2</sup>(&theta;/2)</span> around it. That area is the cross-section. A thin foil holds <var>n</var>&thinsp;<var>t</var> nuclei per square metre (<var>n</var> atoms per cubic metre, thickness <var>t</var>), so the fraction of the beam that hits one of those discs is <span class="eq-inline">P = n t &sigma;</span>, as long as the discs hardly overlap.</p>
+
+        <h3>Worked example</h3>
+        <p>Gold has <span data-calc="nGold">5.91 &times; 10<sup>28</sup></span> atoms per cubic metre (from its density and molar mass), so a 1&nbsp;&micro;m foil holds <span data-calc="ntGold">5.91 &times; 10<sup>22</sup></span> per square metre. For 5&nbsp;MeV alphas the cross-section for turning beyond 90&deg; is <span data-calc="sig90">1,630</span>&nbsp;fm<sup>2</sup> (<span data-calc="sig90m">1.63 &times; 10<sup>&minus;27</sup></span>&nbsp;m<sup>2</sup>). Multiply: <span data-calc="p90">9.6 &times; 10<sup>&minus;5</sup></span>, or about <strong>1 in <span data-calc="oneIn90">10,400</span></strong>. The same sum for 10&deg; gives about 1 in <span data-calc="oneIn10">80</span>. Press Fire 1,000,000 and the Monte Carlo count lands close to these.</p>
+
+        <h3>How the historical 1 in 8,000 relates</h3>
+        <p>The famous figure is not a gold-foil number, and the page does not reuse it. Geiger and Marsden's 1909 measurement used a thick <em>platinum</em> plate and the alphas of "radium C" (now known to come from polonium-214, <span data-calc="po214">7.69</span>&nbsp;MeV), which first crossed a little over a centimetre of air (down to about <span data-calc="e1909">7.0</span>&nbsp;MeV, from NIST's ASTAR ranges). The plate was thick, but the returning alphas came from a thin surface layer: about half of them from a layer equivalent to about 2&nbsp;mm of air, roughly <span data-calc="halfLayer">0.6</span>&nbsp;&micro;m of metal by their estimate. So the layer that counts is of the order of a micrometre. One micrometre of platinum at <span data-calc="e1909b">7.0</span>&nbsp;MeV gives about 1 in <span data-calc="oneIn1909">18,600</span> beyond 90&deg; (the 1909 preset): the same order as 1 in 8,000. The rest of the gap is the set-up. The alphas struck the plate at many angles, and one arriving at a slant can leave the front face after turning less than 90&deg;. Alphas also slow down inside the plate, and slower alphas scatter more. And the total was scaled up from counts at a few places by assuming the returning alphas spread evenly over a hemisphere. Rutherford himself called the experiment "not very suited for accurate calculation", and from it estimated a central charge of about 100 electron charges for platinum, against the 78 we now know.</p>
+
+        <h3>What is approximate</h3>
+        <p>Rutherford's formula treats the alpha and the nucleus as point charges that only repel, with one close encounter per alpha and slow (non-relativistic) motion. A 5&nbsp;MeV alpha moves at about <span data-calc="speedPct">5.2</span>% of light speed, so that last part is fine. The point-charge part fails once alphas can reach the nucleus' surface: for gold at about <span data-calc="eTouchAu">25</span>&nbsp;MeV, for aluminium at about <span data-calc="eTouchAl">7</span>&nbsp;MeV, where the nuclear force adds its own pull. The atom's electrons partly shield the nucleus from alphas passing far out, so the smallest angles are slightly overstated. Real foils also slow the alphas (a 5&nbsp;MeV alpha loses about <span data-calc="lossAu">0.46</span>&nbsp;MeV crossing 1&nbsp;&micro;m of gold) and add many small random turns (multiple scattering), which blur the small-angle end of the histogram. The drawing shows a slice through the crystal; every alpha is drawn turning in the plane of the screen, and its motion is slowed by about 10<sup><span data-calc="slowPow">15</span></sup> times so you can follow it.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Books on atomic and nuclear physics and its history. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: history of the atom book</li>
+            <li class="affiliate-placeholder">Affiliate link slot: nuclear physics textbook</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Fine-structure constant, &#8463;c, alpha particle mass and rms charge radius, Avogadro constant: <a href="https://physics.nist.gov/cuu/Constants/Table/allascii.txt">CODATA 2022 recommended values (NIST)</a>. These give e<sup>2</sup>/(4&pi;&epsilon;<sub>0</sub>) = &alpha;&#8463;c = 1.44&nbsp;MeV&middot;fm.</li>
+        <li>Atomic numbers, atomic masses and densities of gold, platinum, silver, copper and aluminium: Particle Data Group, <a href="https://pdg.lbl.gov/2024/AtomicNuclearProperties/">Atomic and Nuclear Properties of Materials</a> (2024).</li>
+        <li>Lattice constants at 25&nbsp;&deg;C and face-centred cubic structure: Swanson &amp; Tatge, <a href="https://nvlpubs.nist.gov/nistpubs/Legacy/circ/nbscircular539v1.pdf">Standard X-ray Diffraction Powder Patterns, NBS Circular 539 Vol.&nbsp;I</a> (1953). The atom spacing drawn as 1&nbsp;cm is the nearest-neighbour distance a/&radic;2.</li>
+        <li>Nuclear rms charge radii (gold-197, platinum-195, silver-107, copper-63, aluminium-27): I. Angeli, <a href="https://galileo.phys.virginia.edu/research/groups/ncd/dldata/rms_pdf.pdf">"A consistent set of nuclear rms charge radii"</a>, Atomic Data and Nuclear Data Tables 87, 185 (2004), Table&nbsp;1. The IAEA's online table (Angeli &amp; Marinova 2013) could not be reached.</li>
+        <li>Alpha ranges and energy loss in the metals and in air: NIST <a href="https://physics.nist.gov/PhysRefData/Star/Text/ASTAR.html">ASTAR stopping-power and range tables</a>.</li>
+        <li>Alpha energies of polonium-210, radon-222, polonium-218 and polonium-214: NNDC <a href="https://www.nndc.bnl.gov/nudat3/">NuDat 3</a> decay data (ENSDF evaluations). Historical names (radium A, radium C&prime;): <a href="https://vanderkrogt.net/elements/element.php?sym=Po">van der Krogt, Elementymology</a>.</li>
+        <li>Geiger &amp; Marsden, "On a Diffuse Reflection of the &alpha;-Particles", Proc. R. Soc. A 82, 495 (1909): the 1 in 8,000 from platinum, the air path and the surface layer (<a href="https://www.chemteam.info/Chem-History/GM-1909.html">transcription</a>).</li>
+        <li>Rutherford, "The Scattering of &alpha; and &beta; Particles by Matter and the Structure of the Atom", Phil. Mag. 21, 669 (1911) (<a href="https://www.chemteam.info/Chem-History/Rutherford-1911/Rutherford-1911.html">transcription</a>).</li>
+        <li>Geiger &amp; Marsden, "The Laws of Deflexion of &alpha; Particles through Large Angles", Phil. Mag. 25, 604 (1913) (<a href="https://www.desy.de/~hoffmann/Physik/GeigerMarsden-1913">transcription</a>).</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

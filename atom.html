@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atom = 1 cm, Proton = 1 cm: the Atom at True Screen Scale | Real-Scale Physics</title>
+  <meta name="description" content="Draw an atom exactly 1 cm across on your calibrated screen and zoom in until its nucleus appears, then draw a proton 1 cm across with its sea of quarks and gluons. Every size comes from cited data.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/atom.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Atom = 1 cm, proton = 1 cm, at true screen scale">
+  <meta property="og:description" content="An atom drawn 1 cm across on your own screen, its nucleus far below a pixel, and a proton 1 cm across with its quarks and gluons.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/atom.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/atom.js"></script>
+</head>
+<body data-view="atom" class="page-atom layout-tall">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Atomic scale</p>
+      <h1>Atom = 1&nbsp;cm, proton = 1&nbsp;cm</h1>
+      <p class="lead">Draw an atom exactly 1&nbsp;cm across on your calibrated screen. Its nucleus is then far smaller than a pixel, so a chain of magnified insets zooms in until it appears. Then make a proton 1&nbsp;cm across and see what is inside it, and how far away its atom's edge would be.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <fieldset class="segmented" id="view-toggle">
+            <legend class="visually-hidden">View</legend>
+            <input type="radio" name="view" id="view-atom" value="atom" checked>
+            <label for="view-atom">Atom = 1&nbsp;cm</label>
+            <input type="radio" name="view" id="view-proton" value="proton">
+            <label for="view-proton">Proton = 1&nbsp;cm</label>
+          </fieldset>
+
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Atom drawn 1 cm across"></canvas>
+          <span class="time-badge" id="motion-badge" data-view-only="proton">MOTION ILLUSTRATIVE, NOT REAL TIME</span>
+        </div>
+
+        <div class="sim-controls">
+          <label class="select-label" data-view-only="atom">
+            <span>Element</span>
+            <select id="element-select" aria-describedby="element-note"></select>
+          </label>
+          <label class="check" data-view-only="atom">
+            <input type="checkbox" id="solid-check">
+            <span>In a solid</span>
+          </label>
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space" data-view-only="proton">Pause</button>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">
+          <span data-view-only="atom">The atom on the left is drawn at true size: hold a ruler to the screen. Each inset magnifies the small square at the centre of the one before it. The chart compares the size of every atom and nucleus.</span>
+          <span data-view-only="proton">The small proton on the left is true size; the big one is magnified. Quarks and gluons are drawn as markers and squiggles: they have no measured size. Press <kbd>Space</kbd> to pause.</span>
+        </p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col" data-view-only="atom">
+            <p class="control-note muted element-note" id="element-note">Pick any element with a measured nuclear size under the drawing. The isotope is its commonest natural one with a measured charge radius. <strong>In a solid</strong> works for copper, silicon and gold.</p>
+            <div class="presets">
+              <h3>Across the periodic table</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="H">Hydrogen</button></li>
+                <li><button type="button" class="btn" data-preset="He">Helium (smallest)</button></li>
+                <li><button type="button" class="btn" data-preset="C">Carbon</button></li>
+                <li><button type="button" class="btn" data-preset="O">Oxygen</button></li>
+                <li><button type="button" class="btn" data-preset="Fe">Iron</button></li>
+                <li><button type="button" class="btn" data-preset="Ba">Barium (largest)</button></li>
+                <li><button type="button" class="btn" data-preset="Pb">Lead</button></li>
+                <li><button type="button" class="btn" data-preset="U">Uranium</button></li>
+              </ul>
+            </div>
+            <div class="presets">
+              <h3>In a solid</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="solid-Cu">Copper metal</button></li>
+                <li><button type="button" class="btn" data-preset="solid-Si">Silicon crystal</button></li>
+                <li><button type="button" class="btn" data-preset="solid-Au">Gold metal</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="controls-col" data-view-only="atom">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>Magnification</dt>
+                <dd><b data-out="magLine">–</b></dd>
+                <dd class="sub" data-out="magSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Atom diameter</dt>
+                <dd><b data-out="atomPm">–</b> pm</dd>
+                <dd class="sub">free atom, density edge</dd>
+              </div>
+              <div class="readout">
+                <dt>Nucleus diameter</dt>
+                <dd><b data-out="nucFm">–</b> fm</dd>
+                <dd class="sub">2 × rms charge radius</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Nucleus at this scale (atom = 1 cm)</dt>
+                <dd><b data-out="nucUm">–</b> µm · <b data-out="nucPx">–</b></dd>
+                <dd class="sub" data-out="nucSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Nuclear share of the volume</dt>
+                <dd><b data-out="volFrac">–</b></dd>
+                <dd class="sub" data-out="volSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Share of the mass in the nucleus</dt>
+                <dd><b data-out="massShare">–</b></dd>
+                <dd class="sub">electrons carry the rest</dd>
+              </div>
+              <div class="readout">
+                <dt>Mass number <var>A</var></dt>
+                <dd><b data-out="massNum">–</b></dd>
+                <dd class="sub" data-out="massNumSub">–</dd>
+              </div>
+              <div class="readout" data-out-wrap="solid">
+                <dt>Neighbours in the solid</dt>
+                <dd><b data-out="solidNn">–</b></dd>
+                <dd class="sub" data-out="solidSub">–</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col" data-view-only="proton">
+            <h3 class="readouts-title">At proton = 1&nbsp;cm</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>Magnification</dt>
+                <dd><b data-out="pMag">–</b></dd>
+                <dd class="sub" data-out="pMagSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>A hydrogen atom would be</dt>
+                <dd><b data-out="pH">–</b> across</dd>
+                <dd class="sub" data-out="pHSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>A gold atom would be</dt>
+                <dd><b data-out="pAu">–</b> across</dd>
+                <dd class="sub" data-out="pAuSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Quark size</dt>
+                <dd><b data-out="pQuark">–</b></dd>
+                <dd class="sub" data-out="pQuarkSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Electron size</dt>
+                <dd><b data-out="pElectron">–</b></dd>
+                <dd class="sub" data-out="pElectronSub">–</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col" data-view-only="proton">
+            <h3 class="readouts-title">Where the proton's mass comes from</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>Three valence quarks (up, up, down)</dt>
+                <dd><b data-out="pValence">–</b> MeV/<var>c</var><sup>2</sup></dd>
+                <dd class="sub" data-out="pValenceSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Proton</dt>
+                <dd><b data-out="pMass">–</b> MeV/<var>c</var><sup>2</sup></dd>
+                <dd class="sub" data-out="pMassSub">–</dd>
+              </div>
+            </dl>
+            <div class="mass-bar" role="img" id="mass-bar" aria-label="Proton mass budget">
+              <span class="mass-bar-quarks" id="mass-bar-quarks"></span>
+              <span class="mass-bar-field"></span>
+            </div>
+            <p class="control-note muted mass-bar-legend"><span class="key key--quarks"></span> valence quark masses <span class="key key--field"></span> energy of the moving quarks and the gluon field</p>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Only ratios of sizes. Your current values plugged in.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">M = 1 cm / d<sub>atom</sub></span>
+          <span class="eq-note" data-eq="mag">–</span>
+        </li>
+        <li>
+          <span class="eq">d<sub>nucleus, screen</sub> = M &times; 2 r<sub>rms</sub></span>
+          <span class="eq-note" data-eq="nuc">–</span>
+        </li>
+        <li>
+          <span class="eq">pixels = d<sub>screen</sub> / pixel size</span>
+          <span class="eq-note" data-eq="px">–</span>
+        </li>
+        <li>
+          <span class="eq">V<sub>nucleus</sub> / V<sub>atom</sub> = (r<sub>nucleus</sub> / r<sub>atom</sub>)<sup>3</sup></span>
+          <span class="eq-note" data-eq="vol">–</span>
+        </li>
+        <li>
+          <span class="eq">m<sub>nucleus</sub> / m<sub>atom</sub> &asymp; 1 &minus; Z m<sub>e</sub> / m<sub>atom</sub></span>
+          <span class="eq-note" data-eq="mass">–</span>
+        </li>
+        <li>
+          <span class="eq">&rho;<sub>1s</sub>(r) = e<sup>&minus;2r/a<sub>0</sub></sup> / &pi;a<sub>0</sub><sup>3</sup></span>
+          <span class="eq-note" data-eq="h1s">–</span>
+        </li>
+        <li>
+          <span class="eq">d<sub>nn</sub> = a / &radic;2 (fcc), a&radic;3 / 4 (diamond)</span>
+          <span class="eq-note" data-eq="nn">–</span>
+        </li>
+        <li>
+          <span class="eq">M<sub>p</sub> = 1 cm / 2 r<sub>p</sub></span>
+          <span class="eq-note" data-eq="pmag">–</span>
+        </li>
+        <li>
+          <span class="eq">(2 m<sub>u</sub> + m<sub>d</sub>) / m<sub>p</sub></span>
+          <span class="eq-note" data-eq="budget">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="card pixel-card" id="pixel-card"></section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">How big is an atom, really?</h2>
+
+        <h3>Atom = 1 cm</h3>
+        <p>Make a hydrogen atom 1&nbsp;cm across and you have magnified it about <span data-calc="hMag">32 million</span> times. A centimetre is about <span data-calc="cmPx">36</span> pixels on a 24-inch 1080p monitor. Its nucleus, a single proton, is then only <span data-calc="hNucUm">0.055</span>&nbsp;&micro;m across, and a gold nucleus in a 1&nbsp;cm gold atom is <span data-calc="auNucUm">0.24</span>&nbsp;&micro;m: <span data-calc="auNucPx">about 1/1,150 of a pixel</span>. No screen can draw that, so the insets magnify the centre a hundred times, and a hundred times again, until the nucleus shows up.</p>
+
+        <h3>Where is the edge of an atom?</h3>
+        <p>An atom has no hard surface. Its electrons are not dots on orbits but a cloud of probability that thins out smoothly with distance. To give every atom a size we use one definition throughout: the distance at which the electron density of a free atom falls to <span data-calc="edgeRho">0.001</span> electrons per cubic bohr (Rahm, Hoffmann and Ashcroft, 2016). For hydrogen the exact 1s cloud reaches that density at <span data-calc="hEdgePm">152</span>&nbsp;pm, close to their <span data-calc="hRahmPm">154</span>&nbsp;pm, and <span data-calc="hInside">93</span>% of the electron lies inside. That edge is what we draw 1&nbsp;cm across, and the cloud fades on beyond it. Other definitions give other sizes: the Bohr radius, where hydrogen's electron is most likely to be found, is <span data-calc="bohrPm">52.9</span>&nbsp;pm, about a third as big.</p>
+        <p>With this definition atoms barely change size across the periodic table: their radius runs from <span data-calc="minAtom">helium (134 pm)</span> to <span data-calc="maxAtom">barium (293 pm)</span>, a factor of only <span data-calc="atomRatio">2.2</span>. Nuclei grow steadily instead: a nucleus's volume is roughly proportional to its mass number <var>A</var>, so its radius grows as <var>A</var><sup>1/3</sup>, from <span data-calc="hNucFm">1.68</span>&nbsp;fm for hydrogen to <span data-calc="uNucFm">11.7</span>&nbsp;fm for uranium. The chart shows both on the same logarithmic scale.</p>
+
+        <h3>Mostly empty, but only by volume</h3>
+        <p>The nucleus fills between <span data-calc="volMin">one part in 6 × 10<sup>15</sup></span> and <span data-calc="volMax">one part in 7 × 10<sup>13</sup></span> of an atom's volume, yet holds more than <span data-calc="massMin">99.9</span>% of its mass. The rest of the atom is not empty in the everyday sense: it is filled by the electron cloud and its electric field. Matter feels solid because the electron clouds of neighbouring atoms repel each other, and the Pauli exclusion principle stops their electrons from crowding into the same states.</p>
+
+        <h3>In a solid, the size that counts is the spacing</h3>
+        <p>Chemists talk about valence bands and energy levels, but those are energies, not distances, so they cannot be drawn to scale. What can be drawn 1:1 in a solid is the lattice: in copper metal, neighbouring atoms are <span data-calc="cuNn">256</span>&nbsp;pm apart, closer than a free copper atom is wide, so their clouds overlap. Turn on <strong>In a solid</strong> to see the measured spacing at the same scale.</p>
+
+        <h3>Proton = 1 cm</h3>
+        <p>Now magnify a proton until it is 1&nbsp;cm across, about <span data-calc="pMag">6 trillion</span> times. A hydrogen atom would be <span data-calc="pH">1.83 km</span> across and a gold atom <span data-calc="pAu">2.69 km</span>. (With the Bohr radius instead of the density edge, hydrogen would be <span data-calc="pBohr">629 m</span>.) Quarks have no measured size: experiments only set an upper limit on their radius of <span data-calc="qLimit">4.3 × 10<sup>−19</sup></span>&nbsp;m, so on a 1&nbsp;cm proton a quark is under <span data-calc="qUm">5.1</span>&nbsp;&micro;m across, <span data-calc="qPx">under 0.02 of a pixel</span>, and may be a true point. Gluons carry the strong force: they are quanta of a field, with no size to draw.</p>
+        <p>So the proton is drawn as a fuzzy region filled with a restless sea of quark and antiquark pairs and gluons, not as three balls. The three valence quarks (two up, one down) give the proton its charge, but their masses add up to only <span data-calc="valence">9.02</span>&nbsp;MeV/<var>c</var><sup>2</sup>, <span data-calc="valencePct">0.96</span>% of its <span data-calc="pMassMeV">938.27</span>&nbsp;MeV/<var>c</var><sup>2</sup>. The other 99% is the energy of the moving quarks and the gluon field, through <var>E</var> = <var>mc</var><sup>2</sup>.</p>
+
+        <h3>Worked example: gold</h3>
+        <p>A free gold atom is <span data-calc="auAtomPm">452</span>&nbsp;pm across, so drawing it 1&nbsp;cm wide magnifies it <span data-calc="auMag">22 million</span> times. Its gold-197 nucleus is <span data-calc="auNucFm">10.9</span>&nbsp;fm across (twice its rms charge radius of <span data-calc="auRms">5.44</span>&nbsp;fm), so on screen it is <span data-calc="auNucUm2">0.24</span>&nbsp;&micro;m. A pixel on a 24-inch 1080p monitor is <span data-calc="pitchUm">277</span>&nbsp;&micro;m, so the nucleus is <span data-calc="auNucPx2">about 1/1,150 of a pixel</span>.</p>
+
+        <h3>What is approximate</h3>
+        <p>Sizes depend on definitions: other atomic radii (covalent, metallic, van der Waals) differ by up to a factor of three, and a nucleus drawn as a uniform ball with the same rms radius would be <span data-calc="sharp">1.29</span> times wider. The cloud of hydrogen is the exact 1s density; other atoms are drawn as smooth clouds with the same edge, without their inner shells. Brightness is compressed so the faint outer cloud shows. The quark sea is an illustration of a quantum field: its pairs, gluons and motion are not to scale in size, number or time. Quark masses are the Particle Data Group's values at a scale of 2&nbsp;GeV; a quark's mass depends on how it is defined, but every definition leaves the valence quarks a small part of the proton's mass.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Books on atoms and particles, and molecular model kits. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: particle physics book</li>
+            <li class="affiliate-placeholder">Affiliate link slot: molecular model kit</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Atom sizes: M. Rahm, R. Hoffmann &amp; N. W. Ashcroft, "Atomic and Ionic Radii of Elements 1&ndash;96", <a href="https://doi.org/10.1002/chem.201602949">Chem. Eur. J. 22, 14625 (2016)</a>, with their <a href="https://doi.org/10.1002/chem.201700610">2017 corrigendum</a> (radius where the free atom's electron density falls to 0.001 e/bohr&sup3;); values read from the <a href="https://github.com/lmmentel/mendeleev">mendeleev</a> element database, which cites both.</li>
+        <li>Nuclear sizes: I. Angeli &amp; K. P. Marinova, "Table of experimental nuclear ground state charge radii: an update", At. Data Nucl. Data Tables 99, 69 (2013), via the <a href="https://www-nds.iaea.org/radii/">IAEA Nuclear Charge Radii table</a> (read from the copy of its CSV in <a href="https://github.com/jeromemargueron/nucleardatapy">nucleardatapy</a>).</li>
+        <li>Bohr radius, proton charge radius, proton, electron and atomic masses, silicon lattice parameter: <a href="https://physics.nist.gov/cuu/Constants/">CODATA 2022 recommended values</a> (NIST).</li>
+        <li>Isotope masses and abundances: NIST, <a href="https://physics.nist.gov/cgi-bin/Compositions/stand_alone.pl">Atomic Weights and Isotopic Compositions</a>.</li>
+        <li>Up and down quark masses: Particle Data Group, S. Navas et al., Phys. Rev. D 110, 030001 (2024) and 2025 update, <a href="https://pdg.lbl.gov/2025/tables/rpp2025-sum-quarks.pdf">quark summary table</a>.</li>
+        <li>Quark-size limit: ZEUS Collaboration, Phys. Lett. B 757, 468 (2016), <a href="https://arxiv.org/abs/1604.01280">arXiv:1604.01280</a>. Electron-size limit: D. Bourilkov, Phys. Rev. D 62, 076005 (2000), <a href="https://arxiv.org/abs/hep-ph/0002172">arXiv:hep-ph/0002172</a>.</li>
+        <li>Lattice constants of copper and gold: R. W. G. Wyckoff, Crystal Structures vol. 1 (1963), via the Crystallography Open Database entries <a href="https://www.crystallography.net/cod/9008468.html">9008468</a> and <a href="https://www.crystallography.net/cod/9008463.html">9008463</a>.</li>
+        <li>Pixel size: your calibration; 24-inch 1920 &times; 1080 screen assumed when unknown. Pixel-size objects: sources in <code>js/data/references.js</code>.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

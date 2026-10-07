@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>atomic-model.js tests (ladder)</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>atomic-model.js tests (atomic scale ladder)</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/atomic-ladder.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as M from '../js/atomic-model.js';
+    import * as A from '../js/astro.js';
+    import { LATTICES, LIFE, LIMITS } from '../js/data/atomic-data.js';
+    import { PIXEL_REFERENCES } from '../js/data/references.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+
+    const P = M.DEFAULT_PITCH;
+    const objs = M.ladderLayout(P);
+    const by = Object.fromEntries(objs.map((o) => [o.id, o]));
+
+    // --- the objects ---
+    check('10 objects: pixel, hair, red blood cell, E. coli, virus, DNA, gold atom, nucleus, proton, quark limit',
+      objs.map((o) => o.id).join() === 'pixel,hair,rbc,ecoli,virus,dna,atom,nucleus,proton,quark');
+    check('each object is smaller than the one before', objs.every((o, i) => i === 0 || o.size < objs[i - 1].size));
+    check('hair 70 µm and red blood cell √(6.2 × 8.2) = 7.13 µm, from references.js',
+      by.hair.size === PIXEL_REFERENCES.find((r) => r.id === 'hair').typicalM && near(by.rbc.size, Math.sqrt(6.2e-6 * 8.2e-6)));
+    check('E. coli 2 µm × 1 µm (Milo & Phillips)', by.ecoli.size === LIFE.ecoli.lengthM && by.ecoli.h === LIFE.ecoli.diameterM);
+    check('virus √(60 × 140) = 91.7 nm, spikes √(9 × 12) = 10.4 nm (Zhu et al.)', near(by.virus.size, 9.165e-8, 1e-3) && near(by.virus.spike, 1.0392e-8, 1e-3));
+    check('DNA 2 nm wide, 3.6 nm per turn, 0.34 nm per base pair', by.dna.size === 2e-9 && by.dna.turn === 3.6e-9 && by.dna.rise === 0.34e-9);
+    check('gold atom 452 pm, gold-197 nucleus 10.9 fm, proton 1.68 fm', near(by.atom.size, 4.52e-10) && near(by.nucleus.size, 1.08742e-14) && near(by.proton.size, 1.6815e-15));
+    check('quark limit: 2 × 0.43e-18 m = 0.86 am, marked as no measured size', near(by.quark.size, 8.6e-19) && by.quark.noSize === true);
+    check('owner\'s "quark limit about 1e-18 m" holds as an order of magnitude (radius 4.3e-19 m)', LIMITS.quarkRadius < 1e-18 && LIMITS.quarkRadius > 1e-19);
+    check('facts quote the cited values (70 µm, 6.2-8.2 µm, 60-140 nm, 0.34 nm, 10.9 fm)',
+      by.hair.fact.includes('70 µm') && by.rbc.fact.includes('6.2 µm to 8.2 µm') && by.virus.fact.includes('60 nm to 140 nm') &&
+      by.dna.fact.includes('0.34 nm') && by.nucleus.fact.includes('10.9 fm') && by.quark.fact.includes('4.3 × 10⁻¹⁹'));
+    check('every object names a source', objs.every((o) => typeof o.source === 'string' && o.source.length > 5));
+
+    // --- the line-up ---
+    const lineup = ['atom', 'dna', 'virus', 'ecoli', 'rbc', 'hair', 'pixel'];
+    const noOverlap = (pitch) => {
+      const L = M.ladderLayout(pitch);
+      const b = Object.fromEntries(L.map((o) => [o.id, o]));
+      return lineup.slice(1).every((id, i) => b[id].x - b[id].w / 2 > b[lineup[i]].x + b[lineup[i]].w / 2);
+    };
+    check('line-up never overlaps on a 24″ 1080p screen', noOverlap(P));
+    check('line-up never overlaps on a 27″ 4K screen (0.16 mm pixels)', noOverlap(M.pixelPitchForScreen(27, 3840, 2160)));
+    check('line-up never overlaps with 0.05 mm pixels (a sharp phone)', noOverlap(5e-5));
+    check('gold nucleus sits at the centre of the gold atom', by.nucleus.x === by.atom.x && by.nucleus.y === by.atom.y);
+    check('proton sits just outside the nucleus', Math.hypot(by.proton.x - by.nucleus.x, by.proton.y - by.nucleus.y) > (by.nucleus.size + by.proton.size) / 2);
+    check('quark-limit circle lies inside the proton', Math.hypot(by.quark.x - by.proton.x, by.quark.y - by.proton.y) + by.quark.size / 2 < by.proton.size / 2);
+
+    // --- stops and the rail ---
+    const stops = M.ladderStops(objs, P, 1000);
+    check('first stop is the true-size pixel: log10(m per px) = log10(pitch)', near(stops[0].log, Math.log10(P)));
+    check('stops go down in scale', stops.every((s, i) => i === 0 || s.log < stops[i - 1].log));
+    check('red blood cell stop frames it at 55% of the shorter side', near(by.rbc.size / 10 ** stops[2].log, 550));
+    const Ls = A.railLengths(stops.map((s) => s.log), { minSeg: 0.6 });
+    check('rail length = powers of ten travelled, short hops counted as 0.6', near(Ls[Ls.length - 1], stops.slice(1).reduce((t, s, i) => t + Math.max(0.6, stops[i].log - s.log), 0), 1e-12));
+    check('the whole journey on a 1000 px tall canvas is about 17 powers of ten (16.9)', near(stops[0].log - stops[stops.length - 1].log, 16.9, 0.01));
+    check('railSFromLength / railLengthFromS round trip at s = 6.4', near(A.railSFromLength(Ls, A.railLengthFromS(Ls, 6.4)), 6.4));
+
+    // --- the view along the rail ---
+    const v0 = M.ladderView(stops, 0, P);
+    check('s = 0: exactly true size (m per px = pitch, t = 1)', v0.mpp === P && v0.t === 1);
+    check('s = 0: centred on the pixel', v0.cam.x === by.pixel.x && v0.cam.y === by.pixel.y);
+    check('at every stop: centred on its object, at its own scale', stops.every((s, i) => {
+      const v = M.ladderView(stops, i, P);
+      return near(v.cam.x, s.cam.x) && near(v.cam.y, s.cam.y) && near(Math.log10(v.mpp), s.log, 1e-12);
+    }));
+    check('last stop: m per px = the zoom limit (t = 0)', M.ladderView(stops, stops.length - 1, P).t === 0);
+    {
+      // Within a hop the next object's screen position moves steadily to the centre (no overshoot).
+      let ok = true;
+      for (let i = 0; i < stops.length - 1; i++) {
+        const target = stops[i + 1].cam;
+        let prev = Infinity;
+        for (let k = 1; k <= 40; k++) {
+          const v = M.ladderView(stops, i + k / 40, P);
+          const px = Math.hypot(target.x - v.cam.x, target.y - v.cam.y) / v.mpp;
+          if (px > prev + 1e-6) ok = false;
+          prev = px;
+        }
+        if (prev > 1e-6) ok = false;
+      }
+      check('every hop: the next object glides to the centre without overshooting', ok);
+    }
+    {
+      // The zoom's fixed point really stays put on screen during a hop (atom → nucleus).
+      const a = stops[6];
+      const b = stops[7];
+      const rho = 10 ** (b.log - a.log);
+      const F = (b.cam.x - rho * a.cam.x) / (1 - rho);
+      const screen = (s) => {
+        const v = M.ladderView(stops, s, P);
+        return (F - v.cam.x) / v.mpp;
+      };
+      check('atom → nucleus hop zooms about a fixed screen point', near(screen(6.2), screen(6.8), 1e-6));
+    }
+    check('magnification at the true pixel = 1', M.ladderMagnification(P, P) === 1);
+    check('magnification at the quark limit (1000 px canvas) ≈ 8 × 10¹⁶', near(M.ladderMagnification(10 ** stops[9].log, P), 8.04e16, 0.01));
+
+    // --- atoms across this pixel ---
+    check('one 24″ 1080p pixel spans 1.02 million silicon atoms (owner: about a million)', near(M.siliconAtomsPerPixel(P), 1.01905e6, 1e-4));
+    check('silicon average spacing a/2 = 271.6 pm', near(M.meanSpacing(LATTICES.Si), 2.71551e-10, 1e-5));
+    check('at 1 pm per pixel, one silicon atom spans 272 pixels', near(1 / M.siliconAtomsPerPixel(1e-12), 271.55, 1e-4));
+
+    // --- explainer figures ---
+    check('a 24″ 1080p pixel is about 4 hair widths (3.95)', Math.round(P / by.hair.size) === 4);
+    check('the pixel is about 15 powers of ten above the quark limit (14.5)', Math.round(Math.log10(P / M.QUARK_LIMIT_DIAMETER)) === 15);
+    check('and about 25 below the Milky Way (24.5)', Math.round(Math.log10(A.MILKY_WAY_DIAMETER / P)) === 25);
+    check('gold atom / nucleus ≈ 41,600', Math.round(by.atom.size / by.nucleus.size / 100) === 416);
+
+    // --- formatting for the rail ---
+    check('scaleBar: 0.7 µm → 500 nm; 3e-18 m → 2 am', M.scaleBar(7e-7).label === '500 nm' && M.scaleBar(3e-18).label === '2 am');
+    check('formatLength of a 27″ 4K pixel: 156 µm', M.formatLength(M.pixelPitchForScreen(27, 3840, 2160)) === '156 µm');
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`atomic-ladder tests: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

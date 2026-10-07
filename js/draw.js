@@ -7,7 +7,7 @@
  * real length is involved. Positions are never rounded (sub-pixel is fine).
  */
 
-import { TAU, rulerTicks, niceFloor } from './physics.js';
+import { TAU, rulerTicks, niceFloor, niceStep } from './physics.js';
 
 export const FONT = '12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 export const FONT_BOLD = '600 12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -171,4 +171,116 @@ export function drawScaleBar(ctx, colors, { x, y, k, maxPx }) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'bottom';
   ctx.fillText(lengthLabel(len), x, y - 8);
+}
+
+/* ---------- Small line charts (graphs drawn on a sim canvas) ---------- */
+
+/** Tick label without float noise: 0.30000000000000004 → "0.3", −0 → "0". */
+export const tickLabel = (v) => (Math.abs(v) < 1e-12 ? '0' : String(Number(v.toPrecision(6))));
+
+/**
+ * Line chart inside the plot box `box` = { x, y, w, h } (CSS px). Labels are
+ * drawn outside the box, so leave about 44 px to its left, 22 px above (title)
+ * and 20 px below (x tick labels).
+ *   xr, yr         [min, max] axis ranges; a zero line is drawn when yr spans 0
+ *   series         [{ points: [[x, y], ...], color, width = 2, dash = null, alpha = 1 }]
+ *   title          text above the box, e.g. 'Velocity (m/s)'
+ *   xLabel         text under the x axis on the right, e.g. 'time (s)'
+ *   marker         optional x for a vertical "now" line
+ *   xFmt, yFmt     tick label formatters
+ * Ticks use the 1-2-5 step that gives about yTicks / xTicks divisions.
+ * Returns the mapping { X, Y } (data → CSS px) for extra annotations.
+ */
+export function drawChart(ctx, colors, {
+  box, xr, yr, series = [], title = '', xLabel = '', marker = null,
+  xTicks = 6, yTicks = 4, xFmt = tickLabel, yFmt = tickLabel,
+}) {
+  const { x, y, w, h } = box;
+  const X = (v) => x + ((v - xr[0]) / (xr[1] - xr[0])) * w;
+  const Y = (v) => y + h - ((v - yr[0]) / (yr[1] - yr[0])) * h;
+  ctx.save();
+  ctx.font = FONT;
+  ctx.lineWidth = 1;
+
+  // Grid + tick labels (1-2-5 steps)
+  const ys = niceStep((yr[1] - yr[0]) / yTicks);
+  const xs = niceStep((xr[1] - xr[0]) / xTicks);
+  ctx.strokeStyle = colors.track;
+  ctx.fillStyle = colors.muted;
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = Math.ceil(yr[0] / ys - 1e-9); i * ys <= yr[1] + ys * 1e-9; i++) {
+    const v = i * ys;
+    const py = Y(v);
+    ctx.globalAlpha = i === 0 ? 0.9 : 0.35;
+    ctx.beginPath();
+    ctx.moveTo(x, py);
+    ctx.lineTo(x + w, py);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillText(yFmt(v), x - 6, py);
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = Math.ceil(xr[0] / xs - 1e-9); i * xs <= xr[1] + xs * 1e-9; i++) {
+    const v = i * xs;
+    const px = X(v);
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(px, y);
+    ctx.lineTo(px, y + h);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillText(xFmt(v), px, y + h + 4);
+  }
+
+  // Axes
+  ctx.strokeStyle = colors.muted;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + h);
+  ctx.lineTo(x + w, y + h);
+  ctx.stroke();
+
+  // Title and x label
+  ctx.fillStyle = colors.fg;
+  ctx.font = FONT_BOLD;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  if (title) ctx.fillText(title, x, y - 6);
+  ctx.font = FONT;
+  ctx.fillStyle = colors.muted;
+  ctx.textAlign = 'right';
+  if (xLabel) ctx.fillText(xLabel, x + w, y - 6);
+
+  // Series, clipped to the box
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y - 2, w, h + 4);
+  ctx.clip();
+  for (const s of series) {
+    if (!s.points?.length) continue;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width ?? 2;
+    ctx.globalAlpha = s.alpha ?? 1;
+    ctx.setLineDash(s.dash ?? []);
+    ctx.beginPath();
+    s.points.forEach(([px, py], i) => (i ? ctx.lineTo(X(px), Y(py)) : ctx.moveTo(X(px), Y(py))));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // "Now" marker
+  if (marker !== null && marker >= xr[0] && marker <= xr[1]) {
+    ctx.strokeStyle = colors.fg;
+    ctx.globalAlpha = 0.6;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(X(marker), y);
+    ctx.lineTo(X(marker), y + h);
+    ctx.stroke();
+  }
+  ctx.restore();
+  return { X, Y };
 }

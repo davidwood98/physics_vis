@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>beam-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>beam-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/beam.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as B from '../js/beam-model.js';
+    import { MATERIALS, PRESET_SIZES } from '../js/data/beam-data.js';
+    import { devicePxPerMetreFromScreen } from '../js/physics.js';
+    import { sigT } from '../js/astro.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const rel = (a, b, eps) => Math.abs(a - b) <= eps * Math.abs(b);
+    const mat = (id) => MATERIALS.find((m) => m.id === id);
+    const k24 = devicePxPerMetreFromScreen(24, 1920, 1080); // CSS px per metre at dpr 1 on a 24″ 1080p screen
+
+    // --- Constants and units ---
+    check('g0 = 9.80665 m/s² (exact)', B.G0 === 9.80665);
+    check('20 kg weighs 196.133 N', near(B.kgToNewtons(20), 196.133));
+    check('kg ↔ N round trip', near(B.newtonsToKg(B.kgToNewtons(3.7)), 3.7));
+    check('24″ 1080p: 3613.69 px per metre (25 mm = 90.3 px)', near(k24, 3613.69, 1e-6) && Math.abs(0.025 * k24 - 90.34) < 0.01);
+
+    // --- Section properties: closed forms vs strip integration ---
+    {
+      const s = B.sectionProperties('rect', { b: 0.25, h: 0.018 });
+      check('rect 250 × 18 mm: I = 121,500 mm⁴', near(s.I * 1e12, 121500, 1e-12));
+      check('rect: A = bh, c = h/2, Z = bh²/6', near(s.A, 0.0045) && near(s.c, 0.009) && near(s.Z, (0.25 * 0.018 ** 2) / 6));
+      const n = B.integrateI(() => 0.25, 0.018);
+      check('rect: strip integration agrees (1e-6)', rel(n.I, s.I, 1e-6) && rel(n.A, s.A, 1e-9));
+    }
+    {
+      const d = 0.02;
+      const s = B.sectionProperties('round', { d });
+      const n = B.integrateI((y) => 2 * Math.sqrt(Math.max(0, (d / 2) ** 2 - y * y)), d, 200000);
+      check('round: I = πd⁴/64 = πr⁴/4', near(s.I, (Math.PI * (d / 2) ** 4) / 4));
+      check('round: strip integration agrees (1e-5)', rel(n.I, s.I, 1e-5) && rel(n.A, s.A, 1e-5));
+    }
+    {
+      const D = 0.0483;
+      const t = 0.004;
+      const s = B.sectionProperties('tube', { D, t });
+      const ro = D / 2;
+      const ri = ro - t;
+      const n = B.integrateI((y) => 2 * Math.sqrt(Math.max(0, ro * ro - y * y)) - 2 * Math.sqrt(Math.max(0, ri * ri - y * y)), D, 400000);
+      check('tube: I = π(r₂⁴ − r₁⁴)/4 (annulus)', near(s.I, (Math.PI * (ro ** 4 - ri ** 4)) / 4));
+      check('tube: strip integration agrees (1e-4)', rel(n.I, s.I, 1e-4) && rel(n.A, s.A, 1e-4));
+      check('tube with t = D/2 equals the solid bar', near(B.sectionProperties('tube', { D, t: D / 2 }).I, B.sectionProperties('round', { d: D }).I));
+    }
+    {
+      const s = B.sectionProperties('rhs', { B: 0.04, H: 0.04, t: 0.002 });
+      check('RHS 40 × 40 × 2: I = (40⁴ − 36⁴)/12 = 73,365.3 mm⁴', near(s.I * 1e12, (40 ** 4 - 36 ** 4) / 12, 1e-10));
+      const r = B.sectionProperties('rhs', { B: 0.05, H: 0.1, t: 0.004 });
+      const n = B.integrateI((y) => (Math.abs(y) > 0.046 ? 0.05 : 0.008), 0.1);
+      check('RHS 50 × 100 × 4: strip integration agrees (1e-6)', rel(n.I, r.I, 1e-6) && rel(n.A, r.A, 1e-6));
+    }
+    {
+      const ipe = PRESET_SIZES.ipe100;
+      const s = B.sectionProperties('i', { bf: ipe.b, h: ipe.h, tf: ipe.tf, tw: ipe.tw });
+      const n = B.integrateI((y) => (Math.abs(y) > ipe.h / 2 - ipe.tf ? ipe.b : ipe.tw), ipe.h, 100000);
+      check('I-section: strip integration agrees (1e-6)', rel(n.I, s.I, 1e-6) && rel(n.A, s.A, 1e-6));
+      check('IPE 100 simplified: I = 163 cm⁴ (page text)', sigT(s.I * 1e8, 3) === '163');
+      check('IPE 100: simplified I is 3–6% below the tabulated 171 cm⁴ (no root radii)', s.I < ipe.Iy && s.I > 0.94 * ipe.Iy);
+      check('IPE 100: simplified area within 5% of the tabulated 10.3 cm²', s.A < ipe.A && s.A > 0.95 * ipe.A);
+      check('IPE 100: tabulated mass 8.1 kg/m ≈ 7850 × A', rel(7850 * ipe.A, ipe.massPerMetre, 0.01));
+    }
+    {
+      const { width: b, thickness: t } = PRESET_SIZES.shelfBoard;
+      const flat = B.sectionProperties('rect', { b, h: t }).I;
+      const edge = B.sectionProperties('rect', { b: t, h: b }).I;
+      check('board on edge is 193 times stiffer ((250/18)²)', Math.round(edge / flat) === 193);
+    }
+
+    // --- AWC DA6 formulas: shapes, boundary conditions, consistency ---
+    const EI = 1234.5;
+    const L = 1.3;
+    const P = 250;
+    const w = 180;
+    {
+      const c = B.simplePoint(P, L / 2, L, EI);
+      check('Fig 7: centre load δmax = PL³/48EI', near(c.v(L / 2), (P * L ** 3) / (48 * EI)));
+      check('Fig 7: Δx = Px(3L² − 4x²)/48EI for x < L/2', [0.1, 0.3, 0.6].every((x) => near(c.v(x), (P * x * (3 * L * L - 4 * x * x)) / (48 * EI))));
+      check('Fig 7: Mmax = PL/4, end slope PL²/16EI', near(c.M(L / 2), (P * L) / 4) && near(c.slope(0), (P * L * L) / (16 * EI)));
+      check('closed form deltaSimpleCentre', near(B.deltaSimpleCentre(P, L, EI), c.v(L / 2)));
+    }
+    {
+      const a = 0.9;
+      const b = L - a;
+      const c = B.simplePoint(P, a, L, EI);
+      check('Fig 8: supports do not move', Math.abs(c.v(0)) < 1e-15 && Math.abs(c.v(L)) < 1e-15);
+      check('Fig 8: continuous under the load', near(c.v(a - 1e-12), c.v(a + 1e-12), 1e-9));
+      check('Fig 8: δa = Pa²b²/3EIL under the load', near(c.v(a), (P * a * a * b * b) / (3 * EI * L)));
+      check('Fig 8: Mmax = Pab/L', near(c.M(a), (P * a * b) / L));
+      const { delta, x } = B.deltaSimplePoint(P, a, L, EI);
+      const xr = B.slopeRoot(c.slope, L);
+      check('Fig 8: δmax formula (a > b) = numerical maximum', near(delta, c.v(xr), 1e-9) && near(x, xr, 1e-7));
+      const m = B.deltaSimplePoint(P, b, L, EI);
+      const cm = B.simplePoint(P, b, L, EI);
+      check('Fig 8 mirrored (a < b): same δmax, x from the other end', near(m.delta, delta) && near(m.x, L - x, 1e-9) && near(cm.v(m.x), delta, 1e-9));
+      check('Fig 8: end slopes Pab(L+b)/6EIL and Pab(L+a)/6EIL',
+        near(c.slope(0), (P * a * b * (L + b)) / (6 * EI * L)) && near(-c.slope(L), (P * a * b * (L + a)) / (6 * EI * L)));
+    }
+    {
+      const c = B.simpleUdl(w, L, EI);
+      check('Fig 1: UDL δmax = 5wL⁴/384EI at the centre', near(c.v(L / 2), (5 * w * L ** 4) / (384 * EI)) && near(B.deltaSimpleUdl(w, L, EI), c.v(L / 2)));
+      check('Fig 1: Mmax = wL²/8, end slope wL³/24EI', near(c.M(L / 2), (w * L * L) / 8) && near(c.slope(0), (w * L ** 3) / (24 * EI)));
+    }
+    {
+      const c = B.cantileverEnd(P, L, EI);
+      const awc = (xf) => (P / (6 * EI)) * (2 * L ** 3 - 3 * L * L * xf + xf ** 3); // AWC Fig 13, x from the free end
+      check('Fig 13: matches the printed Δx with x from the free end', [0, 0.2, 0.7, 1.3].every((xf) => near(c.v(L - xf), awc(xf))));
+      check('Fig 13: fixed end: no deflection, no slope', Math.abs(c.v(0)) < 1e-15 && Math.abs(c.slope(0)) < 1e-15);
+      check('Fig 13: δmax = PL³/3EI, slope PL²/2EI, M = −PL at the wall',
+        near(c.v(L), B.deltaCantileverEnd(P, L, EI)) && near(B.deltaCantileverEnd(P, L, EI), (P * L ** 3) / (3 * EI)) &&
+        near(c.slope(L), (P * L * L) / (2 * EI)) && near(c.M(0), -P * L));
+    }
+    {
+      const c = B.cantileverUdl(w, L, EI);
+      const awc = (xf) => (w / (24 * EI)) * (xf ** 4 - 4 * L ** 3 * xf + 3 * L ** 4); // AWC Fig 12
+      check('Fig 12: matches the printed Δx with x from the free end', [0, 0.2, 0.7, 1.3].every((xf) => near(c.v(L - xf), awc(xf))));
+      check('Fig 12: δmax = wL⁴/8EI, slope wL³/6EI, M = −wL²/2 at the wall',
+        near(c.v(L), (w * L ** 4) / (8 * EI)) && near(B.deltaCantileverUdl(w, L, EI), c.v(L)) &&
+        near(c.slope(L), (w * L ** 3) / (6 * EI)) && near(c.M(0), (-w * L * L) / 2));
+    }
+    {
+      // Every case: slope = dv/dx and curvature v'' = −M/EI (Euler–Bernoulli, v down +)
+      const cases = {
+        'simple point': B.simplePoint(P, 0.4, L, EI), 'simple UDL': B.simpleUdl(w, L, EI),
+        'cantilever end': B.cantileverEnd(P, L, EI), 'cantilever UDL': B.cantileverUdl(w, L, EI),
+      };
+      for (const [name, c] of Object.entries(cases)) {
+        const h = 1e-5;
+        const ok = [0.13, 0.55, 0.97, 1.21].every((x) => {
+          const d1 = (c.v(x + h) - c.v(x - h)) / (2 * h);
+          const d2 = (c.v(x + h) - 2 * c.v(x) + c.v(x - h)) / (h * h);
+          return rel(d1, c.slope(x), 1e-6) && Math.abs(d2 + c.M(x) / EI) < 1e-4 * Math.max(1, Math.abs(c.M(x) / EI));
+        });
+        check(`${name}: slope = dv/dx and v'' = −M/EI`, ok);
+      }
+    }
+
+    // --- analyseBeam: superposition, maxima, positions ---
+    {
+      const r = B.analyseBeam({ caseId: 'simple-udl', L, P: w * L, E: EI, I: 1, c: 0.01, wSelf: 30 });
+      check('superposition: UDL + self-weight = one UDL of w + w_self', near(r.deltaMax, B.deltaSimpleUdl(w + 30, L, EI)) && near(r.xDelta, L / 2, 1e-9));
+      const c = B.analyseBeam({ caseId: 'cantilever-end', L, P, E: EI, I: 1, c: 0.01, wSelf: 30 });
+      check('cantilever end load + self-weight: δ = PL³/3EI + wL⁴/8EI, M = PL + wL²/2',
+        near(c.deltaMax, B.deltaCantileverEnd(P, L, EI) + B.deltaCantileverUdl(30, L, EI)) && near(-c.Mmax, P * L + (30 * L * L) / 2) && c.xDelta === L);
+      let okM = true;
+      let okD = true;
+      for (let i = 0; i < 300; i++) {
+        const aFrac = Math.random();
+        const ws = Math.random() < 0.3 ? 0 : Math.random() * 400;
+        const Pi = Math.random() * 500;
+        const rr = B.analyseBeam({ caseId: 'simple-point', L, P: Pi, aFrac, E: EI, I: 1, c: 0.01, wSelf: ws });
+        let mBest = 0;
+        let vBest = 0;
+        for (let j = 0; j <= 4000; j++) {
+          const x = (L * j) / 4000;
+          mBest = Math.max(mBest, rr.M(x));
+          vBest = Math.max(vBest, rr.v(x));
+        }
+        if (rr.Mmax < mBest * (1 - 1e-9) - 1e-12) okM = false;
+        if (Math.abs(rr.deltaMax - vBest) > 1e-6 * vBest + 1e-15 || rr.deltaMax < vBest * (1 - 1e-12)) okD = false;
+      }
+      check('simply supported: Mmax (shear = 0) ≥ the sampled maximum, 300 random loads', okM);
+      check('simply supported: δmax (slope root) = the sampled maximum, 300 random loads', okD);
+      const r0 = B.analyseBeam({ caseId: 'simple-point', L, P: 100, aFrac: 0, E: EI, I: 1, c: 0.01 });
+      check('load on a support: no deflection, no moment', r0.deltaMax === 0 && r0.Mmax === 0);
+      const e = B.analyseBeam({ caseId: 'simple-point', L, P, aFrac: 0.7, E: EI, I: 1, c: 0.01 });
+      check('end slope reported at the steeper (right) support when the load is right of centre', e.slopeEnd === 'right');
+      check('σ = M c / I', near(e.sigmaMax, (Math.abs(e.Mmax) * 0.01) / 1));
+    }
+    check('δ = σL²/12Ec at mid-span load (rearranged formulas agree)', (() => {
+      const s = B.sectionProperties('rect', { b: 0.05, h: 0.1 });
+      const r = B.analyseBeam({ caseId: 'simple-centre', L: 2, P: 5000, E: 210e9, I: s.I, c: s.c });
+      return near(B.deltaAtStressCentreLoad(r.sigmaMax, 2, 210e9, s.c), r.deltaMax);
+    })());
+    check('self-weight w = ρAg0: 420 kg/m³ × 0.0045 m² → 18.5 N/m', sigT(B.selfWeightPerMetre(420, 0.0045), 3) === '18.5');
+
+    // --- Numbers quoted on the page ---
+    {
+      const c24 = mat('c24');
+      const s = B.sectionProperties('rect', { b: 0.25, h: 0.018 });
+      const P20 = B.kgToNewtons(20);
+      const r = B.analyseBeam({ caseId: 'simple-centre', L: 1, P: P20, E: c24.E, I: s.I, c: s.c });
+      check('worked example: P = 196 N', sigT(P20, 3) === '196');
+      check('worked example: δ = 3.06 mm', sigT(r.deltaMax * 1000, 3) === '3.06');
+      check('worked example: L/327', Math.round(r.spanRatio) === 327);
+      check('worked example: M = 49 N·m', sigT(r.Mmax, 2) === '49');
+      check('worked example: σ = 3.63 MPa, 15% of fm,k', sigT(r.sigmaMax / 1e6, 3) === '3.63' && Math.round((r.sigmaMax / c24.strength) * 100) === 15);
+      const half = B.analyseBeam({ caseId: 'simple-centre', L: 0.5, P: P20, E: c24.E, I: s.I, c: s.c });
+      check('worked example: half the span → 0.38 mm (1/8)', sigT(half.deltaMax * 1000, 2) === '0.38' && near(half.deltaMax * 8, r.deltaMax));
+      check('default shelf: 0.382 mm = 1.4 px on a 24″ 1080p screen', sigT(half.deltaMax * 1000, 3) === '0.382' && sigT(half.deltaMax * k24, 2) === '1.4');
+    }
+    {
+      const s355 = mat('s355');
+      const ipe = PRESET_SIZES.ipe100;
+      const s = B.sectionProperties('i', { bf: ipe.b, h: ipe.h, tf: ipe.tf, tw: ipe.tw });
+      const r = B.analyseBeam({ caseId: 'simple-centre', L: 1, P: B.kgToNewtons(4000), E: s355.E, I: s.I, c: s.c });
+      check('IPE 100, 1 m, 4 t: stress ≈ 85% of yield', Math.round((r.sigmaMax / s355.strength) * 100) === 85);
+      check('IPE 100, 1 m, 4 t: δ ≈ 2.4 mm ≈ 9 px on a 24″ 1080p screen', sigT(r.deltaMax * 1000, 2) === '2.4' && Math.round(r.deltaMax * k24) === 9);
+    }
+    {
+      const box = PRESET_SIZES.aluBox;
+      const s = B.sectionProperties('rhs', { B: box.B, H: box.H, t: box.t });
+      const r = B.analyseBeam({ caseId: 'simple-centre', L: 1, P: B.kgToNewtons(10), E: mat('al6082').E, I: s.I, c: s.c });
+      check('aluminium box 40 × 40 × 2, 1 m, 10 kg: δ = 0.398 mm = 1.4 px', sigT(r.deltaMax * 1000, 3) === '0.398' && sigT(r.deltaMax * k24, 2) === '1.4');
+    }
+    {
+      const rule = PRESET_SIZES.rule;
+      const ss = mat('ss304');
+      const s = B.sectionProperties('rect', { b: rule.width, h: rule.thickness });
+      const r = B.analyseBeam({ caseId: 'cantilever-end', L: 0.25, P: B.kgToNewtons(0.1), E: ss.E, I: s.I, c: s.c, wSelf: B.selfWeightPerMetre(ss.density, s.A) });
+      check('steel rule, 250 mm out, 100 g + own weight: δ ≈ 15 mm, under a tenth of the span', sigT(r.deltaMax * 1000, 2) === '15' && r.deltaMax < 0.1 * 0.25);
+      check('steel rule: stress below the 304 proof stress', r.sigmaMax < ss.strength);
+    }
+    check('E ratios in the text: steel/aluminium = 3, steel/softwood ≈ 19', sigT(mat('s355').E / mat('al6082').E, 2) === '3' && sigT(mat('s355').E / mat('c24').E, 2) === '19');
+    check('C24 across the grain is about 30 times less stiff', Math.round(mat('c24').E / mat('c24').E90 / 10) * 10 === 30);
+    check('acrylic: 80 MPa short-term vs 5–10 MPa long-term', mat('pmma').strength === 80e6 && mat('pmma').longTermStressMPa.join() === '5,10');
+    check('every material has E, density, strength, a source and a URL',
+      MATERIALS.every((m) => m.E > 0 && m.density > 0 && m.strength > 0 && m.source && /^https:\/\//.test(m.url)));
+
+    // --- Drawing helpers ---
+    check('fitScale: 500 mm at 3613.69 px/m fits 1808 px at 1:1, not 1806 px', B.fitScale(0.5 * k24, 1808) === 1 && B.fitScale(0.5 * k24, 1806) === 2);
+    check('fitScale: 3 m into 1800 px → 1:7', B.fitScale(3 * k24, 1800) === 7);
+    check('calloutMagnification: 1.38 px → ×20 (gap 28 px), 0.0921 px → ×500', B.calloutMagnification(1.38, 64) === 20 && B.calloutMagnification(0.0921, 64) === 500);
+    check('calloutMagnification: already visible (≥ 32 px) → 1, nothing → 0', B.calloutMagnification(40, 64) === 1 && B.calloutMagnification(0, 64) === 0);
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`beam-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

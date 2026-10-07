@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>wavelength-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>wavelength-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/wavelength.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as W from '../js/wavelength-model.js';
+    import * as D from '../js/data/wavelength-data.js';
+    import { ID1_CARD_WIDTH_M } from '../js/physics.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const within = (a, b, tol) => Math.abs(a - b) <= tol;
+
+    const c = D.C_LIGHT;
+    const vAir20 = W.soundSpeedAir(20, 0);
+    const pitch24 = W.screenPixelPitch(24, 1920, 1080);
+
+    // --- λ = v / f basics ---
+    check('c = 299,792,458 m/s exactly', c === 299792458);
+    check('λ = v/f and f = v/λ round trip', near(W.frequency(343, W.wavelength(343, 440)), 440));
+    check('period: 440 Hz → 2.27 ms', near(W.period(440), 1 / 440));
+
+    // --- speed of sound in air (Cramer 1993 as coded by NPL) ---
+    check('dry air at 20 °C: 343.36 m/s (the familiar 343 m/s)', within(vAir20, 343.36, 0.01) && Math.round(vAir20) === 343);
+    check('dry air at 0 °C: 331.45 m/s', within(W.soundSpeedAir(0, 0), 331.45, 0.01));
+    check('dry air at 15 °C: 340.4 m/s (close to the standard-atmosphere 340.29 m/s)', within(W.soundSpeedAir(15, 0), 340.4, 0.2));
+    check('humid air is faster: 50% at 20 °C adds about 0.6 m/s', within(W.soundSpeedAir(20, 50) - vAir20, 0.63, 0.05));
+    check('warmer air is faster (0 → 30 °C)', W.soundSpeedAir(30) > W.soundSpeedAir(0));
+    check('air formula valid range is 0 to 30 °C (NPL)', D.AIR_CRAMER.tRangeC[0] === 0 && D.AIR_CRAMER.tRangeC[1] === 30);
+
+    // --- speed of sound in water (Marczak 1997) ---
+    check('water at 0 °C = 1402.385 m/s (constant term)', near(W.soundSpeedWater(0), 1402.385));
+    check('water at 20 °C: Marczak 1482.38 vs NIST WebBook 1482.3 (within 0.2 m/s)',
+      within(W.soundSpeedWater(20), D.NIST_WATER_CHECK.speed, 0.2));
+    check('water is about 4.3 times faster than air at 20 °C', within(W.soundSpeedWater(20) / vAir20, 4.32, 0.01));
+    check('waveSpeed: em → c, water → Marczak, air → Cramer',
+      W.waveSpeed('em') === c && near(W.waveSpeed('water', 20), W.soundSpeedWater(20)) && near(W.waveSpeed('air', 20, 0), vAir20));
+
+    // --- the owner's numbers, from the cited inputs ---
+    check('440 Hz in air at 20 °C ≈ 78 cm', Math.round(W.wavelength(vAir20, D.A4_HZ) * 100) === 78);
+    check('20 Hz ≈ 17 m (17.2 m)', W.formatLength(W.wavelength(vAir20, D.HEARING_RANGE.minHz), 2) === '17 m');
+    check('20 kHz ≈ 1.7 cm', W.formatLength(W.wavelength(vAir20, D.HEARING_RANGE.maxHz), 2) === '1.7 cm');
+    check('40 kHz ultrasonic sensor ≈ 8.6 mm', W.formatLength(W.wavelength(vAir20, D.ULTRASONIC_SENSOR.fHz), 2) === '8.6 mm');
+    check('sensor can (12.5 mm) is about 1.5 wavelengths at 40 kHz',
+      D.ULTRASONIC_SENSOR.canDiameterM === 0.0125 && within(D.ULTRASONIC_SENSOR.canDiameterM / W.wavelength(vAir20, 40e3), 1.46, 0.01));
+    check('2.45 GHz microwave oven ≈ 12.2 cm', W.formatLength(W.wavelength(c, 2.45e9)) === '12.2 cm');
+    check('NASA "about 12 centimeters" for ovens agrees (within 3%)', within(W.wavelength(c, 2.45e9) / D.NASA_OVEN_WAVELENGTH_M, 1, 0.03));
+    check('2.4 GHz Wi-Fi band edges → 12.1 to 12.5 cm',
+      W.formatLength(W.wavelength(c, 2483.5e6)) === '12.1 cm' && W.formatLength(W.wavelength(c, 2400e6)) === '12.5 cm');
+    check('2.4 GHz Wi-Fi preset (band centre 2.442 GHz) ≈ 12.3 cm, quarter wave 3.1 cm',
+      W.formatFrequency(D.PRESETS.wifi24.f) === '2.442 GHz' && W.formatLength(W.wavelength(c, D.PRESETS.wifi24.f) / 4, 2) === '3.1 cm');
+    check('5 GHz (nominal) = 6.0 cm; 5 GHz Wi-Fi bands 5.15–5.85 GHz → 5.1 to 5.8 cm',
+      W.formatLength(W.wavelength(c, 5e9), 2) === '6 cm' &&
+      W.formatLength(W.wavelength(c, 5.85e9), 2) === '5.1 cm' && W.formatLength(W.wavelength(c, 5.15e9), 2) === '5.8 cm');
+    check('FM 100 MHz → 3 m, quarter wave 75 cm', W.formatLength(W.wavelength(c, 100e6), 2) === '3 m' && W.formatLength(W.wavelength(c, 100e6) / 4, 2) === '75 cm');
+    check('24″ 1920×1080 pixel = 0.277 mm', within(pitch24 * 1e3, 0.2767, 0.0001));
+    check('700 nm red is about 395 times smaller than that pixel', Math.round(pitch24 / 700e-9) === 395);
+    check('400 nm violet is about 692 times smaller', Math.round(pitch24 / 400e-9) === 692);
+    check('"400 to 700 times smaller" holds for 400–700 nm light', pitch24 / 700e-9 > 380 && pitch24 / 400e-9 < 720);
+    check('532 nm green: about 520 wavelengths per pixel', Math.round(W.wavelengthsPerPixel(pitch24, 532e-9)) === 520);
+    check('harness scale: 24″ 1080p = 3613.69 CSS px per metre (25 mm = 90.3 px)', within(1 / pitch24, 3613.69, 0.01) && within(0.025 / pitch24, 90.34, 0.01));
+
+    // --- bands and ranges ---
+    check('100 MHz is in the FM band (88–108 MHz)', W.bandsAt(100e6).some((b) => b.id === 'fm'));
+    check('2.45 GHz is in the ISM band and the 2.4 GHz Wi-Fi band', W.bandsAt(2.45e9).some((b) => b.id === 'ism') && W.bandsAt(2.45e9).some((b) => b.id === 'wifi24'));
+    check('5.4 GHz (the 5.35–5.47 GHz gap) is not a U-NII band', !W.bandsAt(5.4e9).some((b) => b.id === 'wifi5'));
+    check('5.5 GHz preset is inside a U-NII band', W.bandsAt(D.PRESETS.wifi5.f).some((b) => b.id === 'wifi5'));
+    check('describeWave: 440 Hz audible, 40 kHz ultrasound, 10 Hz infrasound',
+      W.describeWave('air', 440, 0.78) === 'audible sound' && W.describeWave('air', 40e3, 0.0086).startsWith('ultrasound') && W.describeWave('air', 10, 34).startsWith('infrasound'));
+    check('describeWave: 532 nm is visible light, 940 nm is not, 300 nm is not',
+      W.describeWave('em', c / 532e-9, 532e-9) === 'visible light' && W.describeWave('em', c / 940e-9, 940e-9).includes('longer than red') && W.describeWave('em', c / 300e-9, 300e-9).includes('shorter than violet'));
+    check('visible range 380–700 nm (NASA); hearing 20 Hz–20 kHz (OpenStax)',
+      D.VISIBLE_RANGE.minM === 380e-9 && D.VISIBLE_RANGE.maxM === 700e-9 && D.HEARING_RANGE.minHz === 20 && D.HEARING_RANGE.maxHz === 20000);
+    check('air slows light by under 0.03% (n = 1.00027)', D.AIR_REFRACTIVE_INDEX.n - 1 < 3e-4 && D.AIR_REFRACTIVE_INDEX.n > 1);
+
+    // --- round holes as waveguides ---
+    check('p′₁₁ (first zero of J₁′) = 1.8412, matches the tabulated 1.841', within(W.P11, 1.841184, 1e-6) && within(W.P11, D.TE11.p11Tabulated, 5e-4));
+    check('J₁′(p′₁₁) ≈ 0', Math.abs(W.besselJPrime(1, W.P11)) < 1e-12);
+    check('Bessel J₀(2.404826) ≈ 0 (first zero)', Math.abs(W.besselJ(0, 2.404826)) < 1e-6);
+    check('TE₁₁ cut-off λc ≈ 1.706 d', within(W.TE11_CUTOFF_FACTOR, 1.7063, 1e-4));
+    check('2 mm hole cuts off below about 3.4 mm wavelength (3.41 mm)', W.formatLength(W.te11Cutoff(2e-3)) === '3.41 mm');
+    check('1.5 mm hole (typical door, BSH patent): λc = 2.56 mm', W.formatLength(W.te11Cutoff(D.DOOR_MESH.holeM)) === '2.56 mm');
+    {
+      const lc = W.te11Cutoff(D.DOOR_MESH.holeM);
+      const lam = W.wavelength(c, 2.45e9);
+      const a = W.belowCutoffAttenuation(lam, lc);
+      check('oven microwaves are about 48 × the 1.5 mm hole\'s cut-off', Math.round(lam / lc) === 48);
+      check('fade in a 1.5 mm hole: about 21 dB per mm (21.3)', within(W.lossDb(a, 1e-3), 21.3, 0.05));
+      check('power falls to about 1/135 per mm (e^(−2α·1 mm))', Math.round(1 / W.powerFraction(a, 1e-3)) === 135);
+      check('green light fits about 2,820 times across a 1.5 mm hole', Math.round(D.DOOR_MESH.holeM / D.GREEN_LASER_M / 10) === 282);
+    }
+    check('far below cut-off: about 32 dB per hole diameter of depth, whatever the size',
+      within(W.lossDb(W.belowCutoffAttenuation(1e9, W.te11Cutoff(1e-3)), 1e-3), 31.98, 0.01) &&
+      within(W.lossDb(W.belowCutoffAttenuation(1e9, W.te11Cutoff(5e-3)), 5e-3), 31.98, 0.01));
+    check('above cut-off there is no fading (α = 0)', W.belowCutoffAttenuation(1e-3, 2e-3) === 0 && W.belowCutoffAttenuation(2e-3, 2e-3) === 0);
+    check('a hole wider than about 7.2 cm would let 2.45 GHz through', W.formatLength(W.holeForCutoff(W.wavelength(c, 2.45e9)), 2) === '7.2 cm');
+    check('dB per neper = 8.686', within(W.DB_PER_NEPER, 8.6859, 1e-4));
+
+    // --- standing waves ---
+    check('4 m room, first mode ≈ 42.9 Hz', W.formatFrequency(W.modeFrequency(1, vAir20, 4), 3) === '42.9 Hz');
+    check('4 m room modes 2 and 3: 85.8 and 129 Hz',
+      W.formatFrequency(W.modeFrequency(2, vAir20, 4), 3) === '85.8 Hz' && W.formatFrequency(W.modeFrequency(3, vAir20, 4), 3) === '129 Hz');
+    check('guitar-body length 508 mm (NMM): first mode ≈ 338 Hz', W.formatFrequency(W.modeFrequency(1, vAir20, D.GUITAR_BODY.lengthM), 3) === '338 Hz');
+    check('290 mm oven cavity (Sharp R-654M): modes 517 MHz apart', W.formatFrequency(W.modeFrequency(1, c, D.OVEN_CAVITY.widthM), 3) === '517 MHz');
+    check('2.45 GHz sits nearest mode 5 of the 290 mm width (2.58 GHz)',
+      W.nearestMode(2.45e9, c, D.OVEN_CAVITY.widthM) === 5 && W.formatFrequency(W.modeFrequency(5, c, 0.29), 3) === '2.58 GHz');
+    check('hot spots half a wavelength apart: about 6 cm', W.formatLength(W.wavelength(c, 2.45e9) / 2, 1) === '6 cm');
+    check('λₙ = 2L/n: n half-wavelengths fit in L', near(W.modeWavelength(3, 1.5) * 3 / 2, 1.5));
+    check('pressure mode: antinodes at the walls, zero at the nodes',
+      near(Math.abs(W.modeShape('pressure', 2, 0, 1)), 1) && Math.abs(W.modeShape('pressure', 2, 0.25, 1)) < 1e-12);
+    check('field mode: zero at the metal walls', Math.abs(W.modeShape('field', 3, 0, 1)) < 1e-12 && Math.abs(W.modeShape('field', 3, 1, 1)) < 1e-12);
+    check('node positions: pressure n=2 → L/4, 3L/4; field n=2 → 0, L/2, L',
+      W.nodePositions('pressure', 2, 1).join() === '0.25,0.75' && W.nodePositions('field', 2, 1).join() === '0,0.5,1');
+
+    // --- words and formatting ---
+    check('formatLength: 532 nm, 8.58 mm, 78 cm, 17.2 m, 300,000 km',
+      W.formatLength(532e-9) === '532 nm' && W.formatLength(0.0085839) === '8.58 mm' && W.formatLength(0.7804) === '78 cm' &&
+      W.formatLength(17.168) === '17.2 m' && W.formatLength(299792458) === '300,000 km');
+    check('formatLength rounds up a unit cleanly: 0.99996 m → 1 m', W.formatLength(0.99996) === '1 m');
+    check('formatFrequency: 440 Hz, 2.45 GHz, 563.5 THz', W.formatFrequency(440) === '440 Hz' && W.formatFrequency(2.45e9) === '2.45 GHz' && W.formatFrequency(c / 532e-9) === '563.5 THz');
+    check('formatPeriod: 440 Hz → 2.27 ms', W.formatPeriod(1 / 440) === '2.27 ms');
+    check('inputNumber has no float noise', W.inputNumber(0.1 + 0.2) === '0.3' && W.inputNumber(2441.75e6 / 1e9) === '2.44175');
+    check('bank card in the comparisons is the ISO ID-1 width', D.COMPARISONS.find((r) => r.id === 'card').sizeM === ID1_CARD_WIDTH_M);
+    check('78 cm is about 9.1 bank-card widths', W.comparisonText(W.wavelength(vAir20, 440)).startsWith('about 9.1 × the width of a bank card'));
+    check('17 m is about 0.72 × a tennis court (23.77 m)', W.comparisonText(17.168).startsWith('about 0.72 × the length of a tennis court'));
+    check('532 nm is about 1/13 of a red blood cell', W.comparisonText(532e-9).startsWith('about 1/13 of the width of a red blood cell'));
+    check('1 Hz light (300,000 km) compares with the Moon distance', W.comparisonText(c).includes('distance to the Moon'));
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`wavelength-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

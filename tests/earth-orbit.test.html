@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>earth-orbit-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>earth-orbit-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/earth-orbit.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as M from '../js/earth-orbit-model.js';
+    import * as D from '../js/data/earth-orbit-data.js';
+    import { EARTH_DIAMETER, EARTH_MOON_DISTANCE, NEAR_EARTH_SCREEN_SIZE } from '../js/astro.js';
+    import { devicePxPerMetreFromScreen } from '../js/physics.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const round = (x, d) => Number(x.toFixed(d));
+    const GM = D.GM_EARTH;
+    const R = D.EARTH_MEAN_RADIUS;
+
+    // --- data consistency ---
+    check('mean radius matches astro.js EARTH_DIAMETER / 2 (6,371 km)', near(EARTH_DIAMETER / 2, R));
+    check('the 2 cm Earth is the space page\'s near stop (NEAR_EARTH_SCREEN_SIZE = 0.02 m)', NEAR_EARTH_SCREEN_SIZE === 0.02);
+    check('Moon distance matches NASA semimajor axis 384,400 km', near(EARTH_MOON_DISTANCE, D.MOON_SEMIMAJOR_AXIS_CHECK));
+    check('ISS: 250 miles = 402.3 km', near(D.ISS.altitude, 402336));
+
+    // --- general formulas ---
+    check('escape speed = √2 × circular speed', near(M.escapeSpeed(GM, 7e6), Math.SQRT2 * M.circularSpeed(GM, 7e6)));
+    check('period = 2πr / v', near(M.orbitalPeriod(GM, 7e6), (2 * Math.PI * 7e6) / M.circularSpeed(GM, 7e6)));
+    check('radiusForPeriod inverts orbitalPeriod', near(M.radiusForPeriod(GM, M.orbitalPeriod(GM, 9.1e6)), 9.1e6));
+    check('angular speed × r = circular speed', near(M.angularSpeed(GM, 8e6) * 8e6, M.circularSpeed(GM, 8e6)));
+    check('climb energy to infinity → GM/R (escape energy)', near(M.climbEnergy(GM, R, 1e15), M.escapeEnergy(GM, R), 1e-6));
+    check('kinetic energy GM/2r = ½v²', near(M.orbitKineticEnergy(GM, 7e6), 0.5 * M.circularSpeed(GM, 7e6) ** 2));
+    {
+      const s = M.energySplit(GM, R, 5e5);
+      check('energy split fractions add up to 1', near(s.heightFraction + s.speedFraction, 1));
+    }
+
+    // --- the owner's numbers, verified ---
+    check('scale: 1 km ≈ 0.0016 mm at Earth = 2 cm (0.00157 mm)', round(M.toScreen(1e3) * 1e3, 5) === 0.00157);
+    check('scale ratio is 1 : 637.1 million', near(M.SCALE_RATIO, 637.1e6, 1e-9));
+    check('Kármán line 100 km → 0.16 mm above the surface (0.157 mm)', round(M.KARMAN_FACTS.screenHeight * 1e3, 3) === 0.157);
+    {
+      const pitch = 1 / devicePxPerMetreFromScreen(24, 1920, 1080);
+      check('24″ 1080p pixel is 0.277 mm', round(pitch * 1e3, 3) === 0.277);
+      check('…so the Kármán line is thinner than one pixel (0.57 px)', M.KARMAN_FACTS.screenHeight < pitch && round(M.KARMAN_FACTS.screenHeight / pitch, 2) === 0.57);
+      check('ISS height on a 24″ 1080p screen ≈ 2.3 px', round(M.ISS_FACTS.screenHeight / pitch, 1) === 2.3);
+      check('Earth is 72 px across on a 24″ 1080p screen', round(0.02 / pitch, 0) === 72);
+    }
+    check('ISS (NASA 250 miles) is 0.63 mm up on the 2 cm Earth', round(M.ISS_FACTS.screenHeight * 1e3, 2) === 0.63);
+    check('owner\'s 408 km would be 0.64 mm up', round(M.toScreen(408e3) * 1e3, 2) === 0.64);
+    check('ISS orbital speed ≈ 7.7 km/s (7.67)', round(M.ISS_FACTS.v / 1e3, 2) === 7.67);
+    check('ISS lap ≈ 92.5 minutes ("about 90 minutes")', round(M.ISS_FACTS.period / 60, 1) === 92.5);
+    check('ISS lap is within NASA\'s "about 90 minutes" (88 to 95 min)', M.ISS_FACTS.period / 60 > 88 && M.ISS_FACTS.period / 60 < 95);
+    check('geostationary radius 42,164 km from GM and the sidereal day', round(M.GEO_RADIUS / 1e3, 0) === 42164);
+    check('geostationary altitude ≈ 35,786 km above the equator', Math.abs(M.GEO_ALTITUDE / 1e3 - 35786) < 1);
+    check('geostationary speed 3.07 km/s', round(M.GEO_FACTS.v / 1e3, 2) === 3.07);
+    check('geostationary orbit period = one sidereal day', near(M.GEO_FACTS.period, D.SIDEREAL_DAY, 1e-12));
+    check('geostationary orbit ≈ 5.6 cm above the marble (56.2 mm)', round(M.GEO_FACTS.screenHeight * 1e3, 1) === 56.2);
+    check('surface escape speed ≈ 11.2 km/s (11.19)', round(M.SURFACE_ESCAPE_SPEED / 1e3, 2) === 11.19);
+    check('…agrees with NASA\'s 11.186 km/s to 0.01 km/s', Math.abs(M.SURFACE_ESCAPE_SPEED - D.NASA_ESCAPE_VELOCITY_CHECK) < 10);
+    check('ISS escape speed 10.8 km/s', round(M.ISS_FACTS.vEsc / 1e3, 1) === 10.8);
+    check('surface circular speed 7.91 km/s', round(M.SURFACE_CIRCULAR_SPEED / 1e3, 2) === 7.91);
+    check('Moon is ≈ 60 cm from Earth\'s centre at this scale (60.3 cm)', round(M.toScreen(EARTH_MOON_DISTANCE) * 100, 1) === 60.3);
+    check('Moon\'s circular speed ≈ 1.02 km/s', round(M.circularSpeed(GM, EARTH_MOON_DISTANCE) / 1e3, 2) === 1.02);
+    check('GPS 20,200 km → 3.2 cm up, a lap in ≈ 11.97 h (twice a day)', round(M.GPS_FACTS.screenHeight * 100, 1) === 3.2 && round(M.GPS_FACTS.period / 3600, 2) === 11.97);
+    check('GPS speed 3.87 km/s', round(M.GPS_FACTS.v / 1e3, 2) === 3.87);
+
+    // --- speed, not height ---
+    check('ISS energy: 11% height, 89% speed', round(M.ISS_ENERGY.heightFraction * 100, 0) === 11 && round(M.ISS_ENERGY.speedFraction * 100, 0) === 89);
+    check('ISS climb 3.7 MJ/kg, speed 29.4 MJ/kg, total 33.1 MJ/kg',
+      round(M.ISS_ENERGY.climb / 1e6, 1) === 3.7 && round(M.ISS_ENERGY.kinetic / 1e6, 1) === 29.4 && round(M.ISS_ENERGY.total / 1e6, 1) === 33.1);
+    check('escape from the surface: 62.6 MJ/kg', round(M.escapeEnergy(GM, R) / 1e6, 1) === 62.6);
+    check('GEO: climbing dominates (92% height)', round(M.energySplit(GM, R, M.GEO_FACTS.altitude).heightFraction * 100, 0) === 92);
+
+    // --- on-screen speeds ---
+    check('ISS on screen in real time: 0.012 mm/s', round(M.screenSpeed(M.ISS_FACTS.v) * 1e3, 3) === 0.012);
+    check('…at 10 minutes per second: 7.22 mm/s', round(M.screenSpeed(M.ISS_FACTS.v, 600) * 1e3, 2) === 7.22);
+    check('…and 0.0435 px/s at 3613.69 px/m (24″ 1080p)', round(M.screenSpeed(M.ISS_FACTS.v) * 3613.69, 4) === 0.0435);
+    check('a 70 µm hair width takes 5.8 s at the ISS\'s real-time screen speed', round(70e-6 / M.screenSpeed(M.ISS_FACTS.v), 1) === 5.8);
+    check('the 109 m ISS would be 0.17 µm long at this scale', round(M.toScreen(D.ISS.lengthM) * 1e6, 2) === 0.17);
+    check('ISS in October 2026: 417 to 424 km', Math.round(D.ISS.octoberPerigee / 1e3) === 417 && Math.round(D.ISS.octoberApogee / 1e3) === 424);
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`earth-orbit-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

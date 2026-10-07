@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>compact-objects-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>compact-objects-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/compact-objects.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as M from '../js/compact-objects-model.js';
+    import * as D from '../js/data/compact-objects-data.js';
+    import { AU, C_LIGHT, EARTH_DIAMETER, LIGHT_YEAR, PARSEC } from '../js/astro.js';
+    import { PLANETS } from '../js/data/bodies.js';
+    import { devicePxPerMetreFromScreen } from '../js/physics.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const round = (x, d) => Number(x.toFixed(d));
+    const sigr = (x, n) => Number(x.toPrecision(n));
+    const mercury = PLANETS.find((p) => p.id === 'mercury');
+
+    // --- constants and general formulas ---
+    check('c is exact: 299,792,458 m/s', C_LIGHT === 299792458);
+    check('G = 6.67430 × 10⁻¹¹ (CODATA 2022)', D.G === 6.6743e-11);
+    check('Rs = 2GM/c²', near(M.schwarzschildRadius(1e20), 2e20 / C_LIGHT ** 2));
+    check('escape speed at Rs is exactly c', near(M.escapeSpeed(D.GM_SUN, M.RS_SUN), C_LIGHT, 1e-12));
+    check('compactness at Rs = 1', near(M.compactness(D.GM_SUN, M.RS_SUN), 1, 1e-12));
+    check('compactness = (v_esc / c)²', near(M.compactness(D.GM_SUN, 1e7), (M.escapeSpeed(D.GM_SUN, 1e7) / C_LIGHT) ** 2));
+    check('halving R: g × 4, density × 8', near(M.surfaceGravity(1e20, 5e6) / M.surfaceGravity(1e20, 1e7), 4) && near(M.meanDensity(1, 5) / M.meanDensity(1, 10), 8));
+    check('teaspoon = 5 ml × density', near(M.teaspoonMass(1000), 0.005));
+    check('shadow = √27 × Rs', near(M.shadowDiameter(1e20), Math.sqrt(27) * M.schwarzschildRadius(1e20)));
+    check('1 arcsecond at 1 parsec is 1 AU (μas helper)', near(M.sizeFromAngle(1e6, 1), AU, 1e-12));
+    check('angleFromSize inverts sizeFromAngle', near(M.angleFromSize(M.sizeFromAngle(48.7, 8277), 8277), 48.7));
+
+    // --- the Sun ---
+    check('M☉ = GM☉/G = 1.988 × 10³⁰ kg', round(M.M_SUN / 1e30, 3) === 1.988);
+    check('Sun is 1.39 million km across (IAU nominal radius)', round((2 * D.R_SUN) / 1e9, 2) === 1.39);
+    check('Sun\'s horizon Rs ≈ 2.95 km (2,953 m)', round(M.RS_SUN / 1e3, 2) === 2.95 && Math.round(M.RS_SUN) === 2953);
+    check('Sun radius / Rs ≈ 235,600', Math.round(D.R_SUN / M.RS_SUN / 100) * 100 === 235600);
+    {
+      const s = M.squeeze(D.GM_SUN, D.R_SUN);
+      check('Sun: density 1.41 g/cm³, teaspoon 7.05 g', round(s.rho / 1e3, 2) === 1.41 && round(s.teaspoon * 1e3, 2) === 7.05);
+      check('Sun: surface gravity 274 m/s²', Math.round(s.g) === 274);
+      check('Sun: escape speed 618 km/s = 0.21% of c', Math.round(s.vEsc / 1e3) === 618 && round(s.vOverC * 100, 2) === 0.21);
+      check('Sun: compactness 4.2 × 10⁻⁶ (0.0000042)', round(s.compactness * 1e6, 1) === 4.2);
+    }
+
+    // --- white dwarf, neutron star, black hole stages ---
+    check('Sirius B radius 5,634 km (0.008098 R☉)', Math.round(M.SIRIUS_B_RADIUS / 1e3) === 5634);
+    check('Sirius B is "about Earth-sized": 0.88 × Earth\'s diameter', round((2 * M.SIRIUS_B_RADIUS) / EARTH_DIAMETER, 2) === 0.88);
+    check('1 Sun at Sirius B\'s size: a teaspoon weighs 13.3 tonnes', round(M.squeeze(D.GM_SUN, M.SIRIUS_B_RADIUS).teaspoon / 1e3, 1) === 13.3);
+    check('neutron star stage: PSR J0437−4715, 11.36 km', M.NEUTRON_STAR.radius === 11360);
+    {
+      const ns = M.squeeze(D.GM_SUN, M.NEUTRON_STAR.radius);
+      check('1 Sun at 11.36 km: teaspoon 1.6 billion tonnes', round(ns.teaspoon / 1e12, 1) === 1.6);
+      check('1 Sun at 11.36 km: compactness 0.26, escape 0.51 c', round(ns.compactness, 2) === 0.26 && round(ns.vOverC, 2) === 0.51);
+    }
+    check('neutron star about 23 km across; black hole 5.9 km across', round((2 * M.NEUTRON_STAR.radius) / 1e3, 0) === 23 && round((2 * M.RS_SUN) / 1e3, 1) === 5.9);
+    check('NICER radii span 11.4 to 13.0 km (owner said 10 to 12)', round(D.NEUTRON_STARS[0].radius / 1e3, 1) === 11.4 && round(D.NEUTRON_STARS[2].radius / 1e3, 1) === 13);
+    check('stages shrink: ×123, ×496, ×3.8',
+      Math.round(M.STAGES[0].R / M.STAGES[1].R) === 123 && Math.round(M.STAGES[1].R / M.STAGES[2].R) === 496 && round(M.STAGES[2].R / M.STAGES[3].R, 1) === 3.8);
+    check('1 Sun at its horizon: density 1.84 × 10¹⁹ kg/m³', round(M.squeeze(D.GM_SUN, M.RS_SUN).rho / 1e19, 2) === 1.84);
+
+    // --- Earth as a black hole (true size) ---
+    check('Earth\'s Rs = 8.87 mm ("about 9 mm")', round(M.RS_EARTH * 1e3, 2) === 8.87);
+    check('Earth\'s horizon is 17.7 mm across', round(2 * M.RS_EARTH * 1e3, 1) === 17.7);
+    check('Earth\'s mass GM⊕/G = 5.97 × 10²⁴ kg', round(M.M_EARTH / 1e24, 2) === 5.97);
+    {
+      const k = devicePxPerMetreFromScreen(24, 1920, 1080);
+      check('on a 24″ 1080p screen: horizon 64.1 px, 5p 65.0 px, 2 cm Earth 72.3 px',
+        round(2 * M.RS_EARTH * k, 1) === 64.1 && round(D.UK_5P_DIAMETER * k, 1) === 65 && round(0.02 * k, 1) === 72.3);
+    }
+    {
+      const rs = M.schwarzschildRadius(D.G * D.DEFAULT_PERSON_MASS);
+      check('70 kg person: horizon radius ≈ 1.0 × 10⁻²⁵ m, 2.1 × 10⁻²⁵ m across', sigr(rs, 2) === 1.0e-25 && sigr(2 * rs, 2) === 2.1e-25);
+      check('…about 8.1 billion times smaller than a proton', round(D.PROTON_RADIUS / rs / 1e9, 1) === 8.1);
+    }
+    check('1 kg: Rs = 1.49 × 10⁻²⁷ m', sigr(M.schwarzschildRadius(D.G), 3) === 1.49e-27);
+    check('Jupiter as a black hole: Rs 2.82 m', round(M.RS_JUPITER, 2) === 2.82);
+
+    // --- Sagittarius A* ---
+    check('Sgr A* horizon ≈ 0.085 AU (0.0848)', round(M.RS_SGR_A_AU, 4) === 0.0848 && round(M.RS_SGR_A_AU, 3) === 0.085);
+    check('Sgr A* Rs = 12.7 million km = 18.2 Sun radii', round(M.RS_SGR_A / 1e9, 1) === 12.7 && round(M.RS_SGR_A / D.R_SUN, 1) === 18.2);
+    check('Sgr A* Rs uncertainty: ±0.0002 AU stat, ±0.0008 AU sys', round(M.RS_SGR_A_AU * M.SGR_A_FRACTION_STAT, 4) === 0.0002 && round(M.RS_SGR_A_AU * M.SGR_A_FRACTION_SYS, 4) === 0.0008);
+    check('Mercury\'s perihelion 0.31 AU, aphelion 0.47 AU (bodies.js)', round(mercury.a * (1 - mercury.e), 2) === 0.31 && round(mercury.a * (1 + mercury.e), 2) === 0.47);
+    check('…so the horizon is well inside Mercury\'s orbit (28% of perihelion)', round(M.RS_SGR_A_AU / (mercury.a * (1 - mercury.e)), 2) === 0.28);
+    check('Sun radius = 0.0047 AU', round(D.R_SUN / AU, 4) === 0.0047);
+    check('EHT shadow 48.7 μas at 8,277 pc = 0.40 AU', round(M.SGR_A_SHADOW_MEASURED / AU, 2) === 0.4);
+    check('EHT ring 51.8 μas = 0.43 AU', round(M.SGR_A_RING_MEASURED / AU, 2) === 0.43);
+    check('GR shadow √27 Rs = 0.44 AU = 53 μas', round(M.SGR_A_SHADOW_PREDICTED / AU, 2) === 0.44 && Math.round(M.angleFromSize(M.SGR_A_SHADOW_PREDICTED, D.SGR_A.distancePc)) === 53);
+    check('measured shadow is 2.4 × the horizon diameter', round(M.SGR_A_SHADOW_MEASURED / (2 * M.RS_SGR_A), 1) === 2.4);
+    check('horizon spans 20.5 μas from Earth', round(M.SGR_A_HORIZON_ANGLE, 1) === 20.5);
+    check('8,277 pc ≈ 27,000 light-years', sigr((D.SGR_A.distancePc * PARSEC) / LIGHT_YEAR, 3) === 27000);
+    check('M87*: Rs = 128 AU', Math.round(M.RS_M87 / AU) === 128);
+    check('slider top (10¹⁰ Suns): Rs = 197 AU', Math.round(M.schwarzschildRadius(1e10 * D.GM_SUN) / AU) === 197);
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`compact-objects-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

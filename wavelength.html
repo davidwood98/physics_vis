@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wavelength Ruler: Sound, Radio &amp; Light at True Size | Real-Scale Physics</title>
+  <meta name="description" content="Pick a frequency and see one wavelength drawn at true size on your screen, using λ = v/f. A 440 Hz note is about 78 cm long, Wi-Fi about 12 cm, and green light is hundreds of times smaller than a pixel. Plus why a microwave door's holes stop microwaves, and room-mode standing waves.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/wavelength.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Wavelength ruler: sound, radio and light at true size">
+  <meta property="og:description" content="One wavelength of any sound, radio wave or light, drawn at true size on your own screen.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/wavelength.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/wavelength.js"></script>
+</head>
+<body data-view="wave" class="page-wavelength">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Visualisations</p>
+      <h1>Wavelength ruler: sound, radio and light at true size</h1>
+      <p class="lead">Pick a frequency and see one wavelength drawn at its real size, from <span class="eq-inline">&lambda; = v / f</span>. A note you can hum is most of a metre long, Wi-Fi about 12&nbsp;cm, and light is hundreds of times smaller than a pixel. Then see why a microwave oven's door stops microwaves but not light, and why rooms boom at certain notes.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <fieldset class="segmented" id="view-toggle">
+            <legend class="visually-hidden">View</legend>
+            <input type="radio" name="view" id="view-wave" value="wave" checked>
+            <label for="view-wave">Wavelength</label>
+            <input type="radio" name="view" id="view-door" value="door">
+            <label for="view-door">Microwave door</label>
+            <input type="radio" name="view" id="view-standing" value="standing">
+            <label for="view-standing">Standing waves</label>
+          </fieldset>
+
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Wavelength drawn at true size"></canvas>
+          <!-- Animation badge, written by wavelength.js: the animations here are slowed, never real time. -->
+          <span class="time-badge is-slow" id="anim-badge">SLOWED</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space" data-view-only="wave standing">Pause</button>
+          <label class="select-label" data-view-only="wave standing">
+            <span>Wave</span>
+            <select id="medium-select" aria-describedby="speed-note">
+              <option value="air">Sound in air</option>
+              <option value="water">Sound in water</option>
+              <option value="em">Radio and light (electromagnetic)</option>
+            </select>
+          </label>
+          <span class="muted small" id="speed-note" data-view-only="wave standing"></span>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">
+          <span data-view-only="wave">Lengths along the wave are true size; the wave's height is only for drawing. The dimension line marks exactly one wavelength and stays put while the wave moves. Press <kbd>Space</kbd> to play or pause.</span>
+          <span data-view-only="door">The wave, the mesh and the hole on the left are at true size. The graph on the right shows how fast microwaves fade inside a hole of this size.</span>
+          <span data-view-only="standing">Two hard walls a distance <var>L</var> apart. The dashed lines show the envelope (how far the wave swings at each place); the solid line is the wave at this moment, slowed right down. Press <kbd>Space</kbd> to play or pause.</span>
+        </p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <!-- Wavelength view: frequency and wavelength (linked by the wave speed) -->
+            <div class="control" data-view-only="wave">
+              <div class="control-head">
+                <label for="f-range">Frequency <var>f</var></label>
+                <span class="num-field">
+                  <input type="number" id="f-num" inputmode="decimal" step="any" aria-label="Frequency f, in the unit chosen next to it">
+                  <select id="f-unit" class="unit-select" aria-label="Frequency unit"></select>
+                </span>
+              </div>
+              <input type="range" id="f-range" min="0" max="1000" step="1">
+              <div class="range-hint" aria-hidden="true"><span id="f-min">1 Hz</span><span>log scale</span><span id="f-max"></span></div>
+            </div>
+
+            <div class="control" data-view-only="wave">
+              <div class="control-head">
+                <label for="lam-num">Wavelength <var>&lambda;</var></label>
+                <span class="num-field">
+                  <input type="number" id="lam-num" inputmode="decimal" step="any" aria-label="Wavelength, in the unit chosen next to it">
+                  <select id="lam-unit" class="unit-select" aria-label="Wavelength unit"></select>
+                </span>
+              </div>
+              <p class="control-note muted">Type a wavelength to set the frequency the other way: <span class="eq-inline">f = v / &lambda;</span>.</p>
+            </div>
+
+            <!-- Wavelength + standing views: what sets the wave speed -->
+            <div data-view-only="wave standing">
+              <div class="control" id="t-control">
+                <div class="control-head">
+                  <label for="t-range" id="t-label">Air temperature</label>
+                  <span class="num-field">
+                    <input type="number" id="t-num" inputmode="decimal" aria-label="Temperature, degrees Celsius">
+                    <span class="unit" aria-hidden="true">&deg;C</span>
+                  </span>
+                </div>
+                <input type="range" id="t-range">
+                <div class="range-hint" aria-hidden="true"><span id="t-min"></span><span id="t-max"></span></div>
+                <p class="control-note muted" id="t-note"></p>
+              </div>
+              <div class="control" id="rh-control">
+                <div class="control-head">
+                  <label for="rh-range">Relative humidity</label>
+                  <span class="num-field">
+                    <input type="number" id="rh-num" inputmode="numeric" aria-label="Relative humidity, percent">
+                    <span class="unit" aria-hidden="true">%</span>
+                  </span>
+                </div>
+                <input type="range" id="rh-range">
+                <div class="range-hint" aria-hidden="true"><span>0% (dry air)</span><span>100%</span></div>
+              </div>
+            </div>
+
+            <!-- Microwave door view -->
+            <div class="control" data-view-only="door">
+              <div class="control-head">
+                <label for="d-range">Hole diameter <var>d</var></label>
+                <span class="num-field">
+                  <input type="number" id="d-num" inputmode="decimal" aria-label="Hole diameter d, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="d-range">
+              <div class="range-hint" aria-hidden="true"><span>0.2 mm</span><span>log scale</span><span>100 mm</span></div>
+              <p class="control-note muted">Typical door mesh: round holes about <span data-calc="meshHole">1.5 mm</span> across, <span data-calc="meshPitch">2.5 mm</span> apart (BSH patent, see Sources). Measure your own oven's mesh and type it in.</p>
+            </div>
+
+            <!-- Standing waves view -->
+            <div class="control" data-view-only="standing">
+              <div class="control-head">
+                <label for="L-range">Length between the walls <var>L</var></label>
+                <span class="num-field">
+                  <input type="number" id="L-num" inputmode="decimal" aria-label="Length L, metres">
+                  <span class="unit" aria-hidden="true">m</span>
+                </span>
+              </div>
+              <input type="range" id="L-range">
+              <div class="range-hint" aria-hidden="true"><span>1 cm</span><span>log scale</span><span>10 m</span></div>
+            </div>
+            <div class="control" data-view-only="standing">
+              <div class="control-head">
+                <label for="n-range">Mode number <var>n</var></label>
+                <span class="num-field">
+                  <input type="number" id="n-num" inputmode="numeric" aria-label="Mode number n">
+                  <span class="unit" aria-hidden="true"></span>
+                </span>
+              </div>
+              <input type="range" id="n-range">
+              <div class="range-hint" aria-hidden="true"><span>1</span><span>12</span></div>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <!-- Wavelength view -->
+              <div class="readout readout--wide" data-view-only="wave">
+                <dt>Wavelength <var>&lambda;</var> = <var>v</var> / <var>f</var></dt>
+                <dd><b data-out="lam">–</b></dd>
+                <dd class="sub" data-out="lamSub">–</dd>
+              </div>
+              <div class="readout" data-view-only="wave">
+                <dt>Frequency <var>f</var></dt>
+                <dd><b data-out="f">–</b></dd>
+                <dd class="sub" data-out="band">–</dd>
+              </div>
+              <div class="readout" data-view-only="wave">
+                <dt>Period <var>T</var> = 1 / <var>f</var></dt>
+                <dd><b data-out="T">–</b></dd>
+              </div>
+              <div class="readout" data-view-only="wave">
+                <dt>Speed used <var>v</var></dt>
+                <dd><b data-out="v">–</b></dd>
+                <dd class="sub" data-out="vSub">–</dd>
+              </div>
+              <div class="readout" data-view-only="wave">
+                <dt>On this screen</dt>
+                <dd><b data-out="px">–</b></dd>
+                <dd class="sub" data-out="pxSub">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="wave">
+                <dt>One wavelength is</dt>
+                <dd data-out="compare">–</dd>
+              </div>
+
+              <!-- Microwave door view -->
+              <div class="readout" data-view-only="door">
+                <dt>Hole diameter <var>d</var></dt>
+                <dd><b data-out="d">–</b></dd>
+                <dd class="sub" data-out="dPx">–</dd>
+              </div>
+              <div class="readout" data-view-only="door">
+                <dt>Cut-off wavelength <var>&lambda;</var><sub>c</sub></dt>
+                <dd><b data-out="lc">–</b></dd>
+                <dd class="sub" data-out="fc">–</dd>
+              </div>
+              <div class="readout" data-view-only="door">
+                <dt>Microwaves (2.45 GHz)</dt>
+                <dd><b data-out="mwLam">–</b></dd>
+                <dd class="sub" data-out="mwVerdict">–</dd>
+              </div>
+              <div class="readout" data-view-only="door">
+                <dt>Fade inside the hole</dt>
+                <dd><b data-out="fade">–</b></dd>
+                <dd class="sub" data-out="fadeSub">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="door">
+                <dt>Green light (532 nm)</dt>
+                <dd><b data-out="light">–</b></dd>
+                <dd class="sub">far shorter than the cut-off, so it passes straight through</dd>
+              </div>
+
+              <!-- Standing waves view -->
+              <div class="readout" data-view-only="standing">
+                <dt>Mode frequency <var>f</var><sub>n</sub></dt>
+                <dd><b data-out="fn">–</b></dd>
+                <dd class="sub" data-out="fnSub">–</dd>
+              </div>
+              <div class="readout" data-view-only="standing">
+                <dt>Wavelength <var>&lambda;</var><sub>n</sub> = 2<var>L</var> / <var>n</var></dt>
+                <dd><b data-out="lamN">–</b></dd>
+                <dd class="sub" data-out="nodeGap">–</dd>
+              </div>
+              <div class="readout readout--wide" data-view-only="standing">
+                <dt>First modes between these walls</dt>
+                <dd><ul class="examples mode-list" data-out="modes"></ul></dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col">
+            <div class="presets" data-view-only="wave">
+              <h3>Sound (in air)</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="hz20">20 Hz: lowest audible</button></li>
+                <li><button type="button" class="btn" data-preset="a4">440 Hz: A4</button></li>
+                <li><button type="button" class="btn" data-preset="khz1">1 kHz</button></li>
+                <li><button type="button" class="btn" data-preset="khz20">20 kHz: highest audible</button></li>
+                <li><button type="button" class="btn" data-preset="khz40">40 kHz: ultrasonic sensor</button></li>
+              </ul>
+            </div>
+            <div class="presets" data-view-only="wave">
+              <h3>Radio</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="fm">FM radio, 100 MHz</button></li>
+                <li><button type="button" class="btn" data-preset="wifi24">Wi-Fi, 2.4 GHz</button></li>
+                <li><button type="button" class="btn" data-preset="oven">Microwave oven, 2.45 GHz</button></li>
+                <li><button type="button" class="btn" data-preset="wifi5">Wi-Fi, 5 GHz</button></li>
+              </ul>
+            </div>
+            <div class="presets" data-view-only="wave">
+              <h3>Light</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="remote">TV remote, 940 nm (infrared)</button></li>
+                <li><button type="button" class="btn" data-preset="red">Red, 700 nm</button></li>
+                <li><button type="button" class="btn" data-preset="green">Green laser, 532 nm</button></li>
+                <li><button type="button" class="btn" data-preset="violet">Violet, 400 nm</button></li>
+              </ul>
+            </div>
+
+            <div class="presets" data-view-only="door">
+              <h3>Hole sizes</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="holeTypical">Typical door mesh, 1.5 mm</button></li>
+                <li><button type="button" class="btn" data-preset="hole2">2 mm hole</button></li>
+                <li><button type="button" class="btn" data-preset="hole10">1 cm hole</button></li>
+                <li><button type="button" class="btn" data-preset="holeBig">Hole big enough to leak: 8 cm</button></li>
+              </ul>
+            </div>
+
+            <div class="presets" data-view-only="standing">
+              <h3>Boxes and rooms</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="room">4 m room (sound)</button></li>
+                <li><button type="button" class="btn" data-preset="guitar">Guitar-body length, 508 mm (sound)</button></li>
+                <li><button type="button" class="btn" data-preset="ovenCavity">Microwave oven cavity, 290 mm (microwaves)</button></li>
+              </ul>
+            </div>
+            <div class="presets" data-view-only="standing">
+              <h3>Mode</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="modeDown">&minus; Mode down</button></li>
+                <li><button type="button" class="btn" data-preset="modeUp">Mode up +</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">The equations behind the drawing, with your current values plugged in.</p>
+      <ol class="equations">
+        <li data-view-only="wave">
+          <span class="eq">&lambda; = v / f</span>
+          <span class="eq-note" data-eq="lam">–</span>
+        </li>
+        <li data-view-only="wave">
+          <span class="eq">T = 1 / f</span>
+          <span class="eq-note" data-eq="T">–</span>
+        </li>
+        <li data-medium="air">
+          <span class="eq">v &asymp; 331.50 + 0.603 &theta; &minus; 0.00053 &theta;<sup>2</sup></span>
+          <span class="eq-note" data-eq="vAir">–</span>
+        </li>
+        <li data-medium="water">
+          <span class="eq">v = 1402.385 + 5.0388 &theta; &minus; 0.05799 &theta;<sup>2</sup> + &hellip;</span>
+          <span class="eq-note" data-eq="vWater">–</span>
+        </li>
+        <li data-medium="em">
+          <span class="eq">c = 299,792,458 m/s</span>
+          <span class="eq-note" data-eq="vEm">–</span>
+        </li>
+        <li data-view-only="wave">
+          <span class="eq">wavelengths per pixel = pixel size / &lambda;</span>
+          <span class="eq-note" data-eq="px">–</span>
+        </li>
+        <li data-view-only="door">
+          <span class="eq">&lambda;<sub>c</sub> = &pi; d / p&prime;<sub>11</sub> &asymp; 1.706 d</span>
+          <span class="eq-note" data-eq="lc">–</span>
+        </li>
+        <li data-view-only="door">
+          <span class="eq">&alpha; = (2&pi; / &lambda;<sub>c</sub>) &radic;(1 &minus; (&lambda;<sub>c</sub> / &lambda;)<sup>2</sup>)</span>
+          <span class="eq-note" data-eq="alpha">–</span>
+        </li>
+        <li data-view-only="door">
+          <span class="eq">loss = 8.686 &alpha; z &nbsp;dB</span>
+          <span class="eq-note" data-eq="loss">–</span>
+        </li>
+        <li data-view-only="standing">
+          <span class="eq">f<sub>n</sub> = n v / (2L)</span>
+          <span class="eq-note" data-eq="fn">–</span>
+        </li>
+        <li data-view-only="standing">
+          <span class="eq">&lambda;<sub>n</sub> = 2L / n</span>
+          <span class="eq-note" data-eq="lamN">–</span>
+        </li>
+        <li>
+          <span class="eq">pixels = metres &times; scale</span>
+          <span class="eq-note" data-eq="scale">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="card pixel-card" id="pixel-card"></section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Wavelengths, explained</h2>
+
+        <h3>&lambda; = v / f</h3>
+        <p>A wave repeats in space as well as in time. In one period <var>T</var> = 1 / <var>f</var> the wave moves on by exactly one wavelength, so <span class="eq-inline">&lambda; = v T = v / f</span>. The same frequency gives very different lengths in different materials: sound in air moves at about <span data-calc="vAir20">343</span>&nbsp;m/s at 20&nbsp;&deg;C, sound in water at about <span data-calc="vWater20">1,482</span>&nbsp;m/s, and radio waves and light at 299,792,458&nbsp;m/s.</p>
+        <p>Worked example: the note A that orchestras tune to is 440&nbsp;Hz (ISO&nbsp;16). In dry air at 20&nbsp;&deg;C, <span class="eq-inline"><span data-calc="vAir20d">343.4</span> / 440 = <span data-calc="a4m">0.780</span>&nbsp;m</span>, so one wavelength of it is about <strong data-calc="a4">78 cm</strong>. The deepest note most people hear, 20&nbsp;Hz, is about <span data-calc="hz20">17 m</span> long, <span data-calc="hz20Court">about 0.72 × the length of a tennis court</span>.</p>
+
+        <h3>Why ultrasonic sensors are small</h3>
+        <p>A 40&nbsp;kHz ultrasonic distance sensor sends sound with a wavelength of only <span data-calc="khz40">8.6 mm</span>. To send sound out as a beam, rather than spraying it in every direction, a source has to be at least about a wavelength across, and the same goes for catching the echo. At 40&nbsp;kHz that is under a centimetre, so a transducer can of <span data-calc="canD">12.5 mm</span> (about <span data-calc="canLam">1.5</span> wavelengths) is enough: its datasheet gives a beam about <span data-calc="canDir">75</span>&deg; wide. A loudspeaker that beamed 440&nbsp;Hz as tightly would need to be the same number of wavelengths across, about <span data-calc="speakerD">1.1 m</span>, which is why ordinary speakers send low notes all round a room.</p>
+
+        <h3>Why Wi-Fi antennas are a few centimetres</h3>
+        <p>Simple antennas work best when they are a half or a quarter of a wavelength long. The 2.4&nbsp;GHz Wi-Fi band (2.4 to 2.4835&nbsp;GHz) has wavelengths of <span data-calc="wifi24">12.1 to 12.5 cm</span>, so a quarter wave is about <span data-calc="wifiQuarter">3.1 cm</span> and a half wave about <span data-calc="wifiHalf">6.1 cm</span>: that is why Wi-Fi antennas are only a few centimetres long. Microwave ovens use 2.45&nbsp;GHz, about <span data-calc="oven">12.2 cm</span>, almost the same. The 5&nbsp;GHz Wi-Fi bands (5.15 to 5.85&nbsp;GHz) are about half that: <span data-calc="wifi5">5.1 to 5.8 cm</span>. FM radio at 100&nbsp;MHz is <span data-calc="fm">3 m</span> long, so a quarter-wave FM aerial is about <span data-calc="fmQuarter">75 cm</span>.</p>
+
+        <h3>Light is smaller than a pixel</h3>
+        <p>Visible light runs from about 380 to 700&nbsp;nm (NASA). One pixel on a 24-inch 1920&nbsp;&times;&nbsp;1080 monitor is <span data-calc="pitch24">0.277 mm</span> across, so red light at 700&nbsp;nm is about <span data-calc="red24">395</span> times smaller than a pixel and violet at 400&nbsp;nm about <span data-calc="violet24">692</span> times smaller. A green laser pointer (532&nbsp;nm) fits about <span data-calc="green24">520</span> wavelengths across one pixel. No screen can draw a wave of light at true size, so the Wavelength view switches to a magnified pixel when the wavelength gets below about two pixels.</p>
+
+        <h3>Why you can see through a microwave door</h3>
+        <p>The window in a microwave oven door is covered by a metal sheet full of round holes, typically about <span data-calc="meshHole2">1.5 mm</span> across. Each hole behaves like a very short metal pipe. A round metal pipe of diameter <var>d</var> only carries waves shorter than its cut-off wavelength, <span class="eq-inline">&lambda;<sub>c</sub> &asymp; 1.706 d</span> (the TE<sub>11</sub> mode). For a 1.5&nbsp;mm hole that is <span data-calc="lc15">2.56 mm</span>; for a 2&nbsp;mm hole <span data-calc="lc2">3.41 mm</span>. The oven's 12.2&nbsp;cm microwaves are about <span data-calc="lamOverLc">48</span> times too long to get through.</p>
+        <p>A wave below cut-off does not stop dead at the hole: it fades exponentially inside it. For wavelengths much longer than the cut-off the field falls by a factor of <var>e</var> every <span class="eq-inline">&lambda;<sub>c</sub> / 2&pi;</span>, which is about <span data-calc="dbPerD">32</span>&nbsp;dB of power for every hole diameter of depth. In a 1.5&nbsp;mm hole that is about <span data-calc="dbPerMm">21</span>&nbsp;dB per millimetre. Even a hole in a thin sheet lets through very little, because it is so much smaller than the wavelength. Light, at around 0.0005&nbsp;mm, is thousands of times shorter than the cut-off (a 1.5&nbsp;mm hole is about <span data-calc="greenAcross">2,820</span> green wavelengths across), so it passes straight through and you can watch your food. A hole wider than about <span data-calc="leakD">7.2 cm</span> would let the oven's microwaves through.</p>
+
+        <h3>Standing waves, room modes and cavity resonances</h3>
+        <p>Between two hard walls a distance <var>L</var> apart, a wave that bounces back and forth only builds up when a whole number of half-wavelengths fit: <span class="eq-inline">L = n &lambda; / 2</span>, so <span class="eq-inline">f<sub>n</sub> = n v / (2L)</span>. In a 4&nbsp;m room the first of these room modes is at <span data-calc="room1">42.9 Hz</span>, then <span data-calc="room2">85.8</span>, <span data-calc="room3">129</span>&nbsp;Hz and so on. At those bass notes the room booms in some places and goes quiet in others; sound pressure is highest at the walls and in the corners. A real room has three pairs of walls, so it has modes from each length plus combinations of them, and a smaller room has its modes at higher frequencies, spaced further apart. That is why room acoustics depends on size.</p>
+        <p>A microwave oven is a metal box, and the same rule applies along each of its sides. Across a <span data-calc="ovenW">290 mm</span> wide cavity the modes are <span data-calc="ovenF1">517 MHz</span> apart, and the oven's 2.45&nbsp;GHz sits nearest mode <span data-calc="ovenN">5</span>. The field has hot spots about half a wavelength apart, roughly <span data-calc="ovenHalf">6 cm</span>, which is why ovens have a turntable to move the food through them.</p>
+
+        <h3>What is approximate</h3>
+        <p>The speed of sound in air uses Cramer's equation as coded by NPL, valid from 0 to 30&nbsp;&deg;C at normal pressure; water uses Marczak's equation for pure water, valid from 0 to 95&nbsp;&deg;C. Sea water and real rooms with soft furnishings behave differently. Radio and light use the speed in a vacuum: air slows light by under 0.03% (refractive index 1.00027, NIST), far too little to show. The cut-off model treats each hole as an ideal round metal pipe; real meshes are close to this but not exact. The standing-wave view is one-dimensional: real rooms and cavities have modes in all three directions. Hole sizes vary between ovens, and the pixel comparisons are only as good as your screen calibration.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Sensor kits and books on waves and acoustics. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: ultrasonic sensor kit</li>
+            <li class="affiliate-placeholder">Affiliate link slot: acoustics or waves book</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Speed of light: exact by definition, 299,792,458&nbsp;m/s (<a href="https://physics.nist.gov/cgi-bin/cuu/Value?c">NIST CODATA</a>). Refractive index of air, 1.00027 at 20&nbsp;&deg;C: <a href="https://emtoolbox.nist.gov/Wavelength/Documentation.asp">NIST Engineering Metrology Toolbox</a>, Table 1.</li>
+        <li>Speed of sound in air: Cramer (1993), J. Acoust. Soc. Am. 93, 2510, as coded in NPL's <a href="https://resource.npl.co.uk/acoustics/techguides/speedair/">Speed of sound in air calculator</a> (read from the <a href="https://web.archive.org/web/20241213093739/http://resource.npl.co.uk/acoustics/techguides/speedair/">Internet Archive copy</a>), valid 0 to 30&nbsp;&deg;C.</li>
+        <li>Speed of sound in pure water: Marczak (1997), J. Acoust. Soc. Am. 102, 2776, from NPL's <a href="https://resource.npl.co.uk/acoustics/techguides/soundpurewater/">Speed of sound in pure water</a> guide (<a href="https://web.archive.org/web/20241113210619/http://resource.npl.co.uk/acoustics/techguides/soundpurewater/">archived copy</a>), valid 0 to 95&nbsp;&deg;C; checked against the <a href="https://webbook.nist.gov/chemistry/fluid/">NIST Chemistry WebBook</a> (1482.3&nbsp;m/s at 20&nbsp;&deg;C).</li>
+        <li>Hearing range 20&nbsp;Hz to 20&nbsp;kHz: OpenStax, <a href="https://openstax.org/books/college-physics-2e/pages/17-6-hearing">College Physics 2e, 17.6 Hearing</a>. Concert pitch A&nbsp;=&nbsp;440&nbsp;Hz: <a href="https://committee.iso.org/standard/3601.html?browse=ics">ISO 16:1975</a>.</li>
+        <li>40&nbsp;kHz ultrasonic sensor: Same Sky <a href="https://sameskydevices.com/product/resource/cusa-t75-18-2400-th.pdf">CUSA-T75-18-2400-TH datasheet</a> (40&nbsp;kHz, &oslash;12.5&nbsp;mm, 75&deg; directivity) and the Elecfreaks <a href="https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf">HC-SR04 datasheet</a> (40&nbsp;kHz bursts).</li>
+        <li>Radio bands (US FCC rules, eCFR): FM 88 to 108&nbsp;MHz, <a href="https://www.ecfr.gov/current/title-47/part-73/section-73.201">47 CFR 73.201</a>; 2.4&nbsp;GHz Wi-Fi 2400 to 2483.5&nbsp;MHz, <a href="https://www.ecfr.gov/current/title-47/part-15/section-15.247">47 CFR 15.247</a>; microwave ovens 2450&nbsp;&plusmn;&nbsp;50&nbsp;MHz (ISM), <a href="https://www.ecfr.gov/current/title-47/part-18/section-18.301">47 CFR 18.301</a>; 5&nbsp;GHz Wi-Fi 5.15 to 5.85&nbsp;GHz (U-NII), <a href="https://www.ecfr.gov/current/title-47/part-15/section-15.407">47 CFR 15.407</a>. NASA's <a href="https://science.nasa.gov/ems/06_microwaves/">Microwaves</a> page agrees ovens use waves "about 12 centimeters" long.</li>
+        <li>Visible light 380 to 700&nbsp;nm: NASA Science, <a href="https://science.nasa.gov/ems/09_visiblelight/">Visible Light</a>. TV remote infrared, about 940&nbsp;nm: NASA Science, <a href="https://science.nasa.gov/ems/07_infraredwaves/">Infrared Waves</a>. Green laser pointers, 532&nbsp;nm: Galang et al., <a href="https://nvlpubs.nist.gov/nistpubs/Legacy/TN/nbstechnicalnote1668.pdf">NIST Technical Note 1668</a> (2010).</li>
+        <li>Microwave door mesh, holes about 1.5&nbsp;mm across and 2.5&nbsp;mm apart: BSH Hausger&auml;te, <a href="https://patents.google.com/patent/US11528784B2/en">US patent 11,528,784 B2</a> (2022).</li>
+        <li>Round-waveguide cut-off (TE<sub>11</sub> is the lowest mode, &lambda;<sub>c</sub> = 2&pi;a / p&prime;<sub>11</sub>, fading below cut-off): W. C. Chew, <a href="https://engineering.purdue.edu/wcchew/ece604s19/Lecture%20Notes/Lect19.pdf">ECE 604 Lecture 19</a>, Purdue University; p&prime;<sub>11</sub> = 1.841: R. Hudson, <a href="https://users.tricity.wsu.edu/~hudson/Teaching/EE518/4c%20Cylindrical%20waveguide.pdf">EE 518 Lecture 4c</a>, Washington State University.</li>
+        <li>Microwave oven cavity 290&nbsp;&times;&nbsp;194&nbsp;&times;&nbsp;313&nbsp;mm, 2450&nbsp;MHz, turntable: <a href="https://manualsdump.com/en/manuals/sharp-r-654m/87884/47">Sharp R-654M operation manual</a>, specifications. Guitar body length 508&nbsp;mm: National Music Museum, <a href="https://emuseum.nmmusd.org/objects/16689/guitar">Martin D-28 (1941), NMM 10738</a>.</li>
+        <li>Size comparisons: tennis court 23.77&nbsp;m, <a href="https://www.itftennis.com/media/7221/2026-rules-of-tennis-english.pdf">ITF Rules of Tennis 2026</a>; Earth's mean radius 6,371&nbsp;km, <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html">NASA Earth Fact Sheet</a>; Moon distance 384,400&nbsp;km, <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html">NASA Moon Fact Sheet</a>; bank card 85.60&nbsp;mm (ISO/IEC 7810 ID-1); small objects as listed in <code>js/data/references.js</code>.</li>
+        <li>All sources retrieved 7 October 2026. Every number on this page is computed from these values; see <code>js/data/wavelength-data.js</code> for the quoted text behind each one.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

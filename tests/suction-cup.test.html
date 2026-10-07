@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>suction-cup-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>suction-cup-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/suction-cup.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as V from '../js/suction-cup-model.js';
+    import * as D from '../js/data/suction-cup-data.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const G0 = 9.80665;
+
+    // ---------- Pressure ----------
+    check('−60 kPa gauge = 59.2% vacuum, 41.3 kPa absolute (101.325 kPa atmosphere)',
+      V.vacuumPercent(-60).toFixed(1) === '59.2' && near(V.absolutePressureKPa(-60), 41.325));
+    check('−90 kPa = 88.8% vacuum, 11.3 kPa absolute', V.vacuumPercent(-90).toFixed(1) === '88.8' && V.absolutePressureKPa(-90).toFixed(1) === '11.3');
+    check('a perfect vacuum is −101.325 kPa = 100%', near(V.vacuumPercent(-101.325), 100));
+
+    // ---------- Holding force F = Δp·A·n ----------
+    check('Ø50 mm at −60 kPa: 60,000 Pa × π × 0.025² = 117.8 N', near(V.holdingForce(-60, 0.05), 60000 * Math.PI * 0.025 ** 2) && V.holdingForce(-60, 0.05).toFixed(1) === '117.8');
+    check('n cups give n times the force', near(V.holdingForce(-60, 0.05, 6), 6 * V.holdingForce(-60, 0.05)));
+    check('doubling the diameter quadruples the force; doubling the vacuum doubles it (SMC p. 878)',
+      near(V.holdingForce(-40, 0.04) / V.holdingForce(-40, 0.02), 4) && near(V.holdingForce(-80, 0.02) / V.holdingForce(-40, 0.02), 2));
+    check('SMC units: W = P × S × 0.1 equals Δp·A in SI', near(V.smcLiftingForce(-60, 19.635), 117.81) && near(V.smcLiftingForce(-60, V.cupArea(0.05) * 1e4), V.holdingForce(-60, 0.05)));
+
+    // ---------- SMC's published values ----------
+    {
+      // Table entries of 10 N and more are the nominal-area value rounded down to whole newtons.
+      const bad = D.SMC_TABLE.filter((r) => Math.floor(V.holdingForce(r.kPa, r.d / 1000) + 1e-9) !== r.N);
+      check(`SMC theoretical lifting force table: ${D.SMC_TABLE.length} entries (ø13 to ø50, −40/−60/−80 kPa) reproduced`, bad.length === 0);
+      if (bad.length) console.log('SMC mismatches', bad);
+    }
+    check('SMC example: ø20 gives 12 N at −40 kPa and 25 N at −80 kPa; ø40 gives 50 N and 100 N',
+      Math.floor(V.smcLiftingForce(-40, 3.14)) === 12 && Math.floor(V.smcLiftingForce(-80, 3.14)) === 25 &&
+      Math.floor(V.smcLiftingForce(-40, 12.56)) === 50 && Math.floor(V.smcLiftingForce(-80, 12.56)) === 100);
+    check('SMC safety factor t: 4 for pad horizontal (cases I, II), 8 for pad vertical (III)',
+      V.smcFactor('I') === 4 && V.smcFactor('II') === 4 && V.smcFactor('III') === 8);
+    check('SMC required force = t·m·g, no acceleration or friction term',
+      near(V.requirement({ convention: 'smc', loadCase: 'II', m: 2, a: 30, mu: 0.1, S: 2, g: G0 }).required, 4 * 2 * G0));
+
+    // ---------- Schmalz's worked example (steel sheet, 61.33 kg, 5 m/s², μ = 0.5, g = 9.81) ----------
+    {
+      const ex = D.SCHMALZ_EXAMPLE;
+      check('Schmalz sheet mass: 2.5 × 1.25 × 0.0025 m × 7,850 kg/m³ = 61.33 kg',
+        (ex.lengthM * ex.widthM * ex.thicknessM * ex.densityKgM3).toFixed(2) === '61.33');
+      const p = { convention: 'schmalz', m: ex.massKg, a: ex.a, mu: ex.mu, g: D.CONVENTIONS.schmalz.gWritten };
+      const I = V.requirement({ ...p, loadCase: 'I', S: ex.caseI.S }).required;
+      const II = V.requirement({ ...p, loadCase: 'II', S: ex.caseII.S }).required;
+      const III = V.requirement({ ...p, loadCase: 'III', S: ex.caseIII.S }).required;
+      check('load case I: 61.33 × (9.81 + 5) × 1.5 = 1,362.4 N (Schmalz quotes 1,363 N, within 0.05%)',
+        I.toFixed(1) === '1362.4' && Math.abs(I - ex.caseI.N) / ex.caseI.N < 5e-4);
+      check('load case II: 61.33 × (9.81 + 5 / 0.5) × 1.5 = 1,822 N (as Schmalz)', Math.round(II) === ex.caseII.N);
+      check('load case III: (61.33 / 0.5) × (9.81 + 5) × 2 = 3,633 N (as Schmalz)', Math.round(III) === ex.caseIII.N);
+      const [six, eight] = ex.perCup;
+      check('per cup: 1,822 N / 6 = 304 N (SUF 90 gives 328 N), 1,822 N / 8 = 228 N (SUF 80 gives 254 N)',
+        Math.round(ex.caseII.N / six.n) === six.N && Math.round(ex.caseII.N / eight.n) === eight.N && six.cupN >= six.N && eight.cupN >= eight.N);
+    }
+    {
+      const e = D.SCHMALZ_DIAMETER_EXAMPLE;
+      check('Schmalz diameter shortcut: 50 kg, S = 2, −0.4 bar, 4 cups → 8.85 cm (horizontal)',
+        V.schmalzDiameterCm(e.m, e.S, e.bar, e.n).toFixed(2) === String(e.horizontalCm));
+      check('  and 12.5 cm for vertical pick-up with μ = 0.5', V.schmalzDiameterCm(e.m, e.S, e.bar, e.n, e.mu).toFixed(1) === String(e.verticalCm));
+      const ours = V.diameterForForce((e.m * 9.81 * e.S) / e.n, -40) * 100;
+      check('  the shortcut is F = Δp·A rearranged: our 8.83 cm is within 0.3% of 8.85 cm', Math.abs(ours / e.horizontalCm - 1) < 3e-3);
+    }
+    {
+      const nominal = V.holdingForce(D.SUF90.vacuumKPa, D.SUF90.diameterMm / 1000);
+      const effD = V.diameterForForce(D.SUF90.suctionForceN, D.SUF90.vacuumKPa) * 1000;
+      check('SUF 90 at −60 kPa: nominal area gives 382 N, catalogue says 328 N (86%), an effective diameter of 83 mm',
+        Math.round(nominal) === 382 && Math.round((100 * D.SUF90.suctionForceN) / nominal) === 86 && Math.round(effD) === 83);
+    }
+
+    // ---------- Load cases (hand calculations) ----------
+    {
+      const base = { convention: 'schmalz', m: 2, a: 5, mu: 0.5, S: 1.5, g: G0 };
+      const r1 = V.requirement({ ...base, loadCase: 'I' });
+      const r2 = V.requirement({ ...base, loadCase: 'II' });
+      const r3 = V.requirement({ ...base, loadCase: 'III' });
+      check('2 kg, 5 m/s², μ 0.5, S 1.5: case I 2 × 14.807 × 1.5 = 44.42 N', near(r1.required, 2 * (G0 + 5) * 1.5) && r1.required.toFixed(2) === '44.42');
+      check('  case II 2 × (9.807 + 10) × 1.5 = 59.42 N', r2.required.toFixed(2) === '59.42');
+      check('  case III (2 / 0.5) × 14.807 × 1.5 = 88.84 N', r3.required.toFixed(2) === '88.84');
+      check('  parts add up to the demand and demand × S = required', [r1, r2, r3].every((r) => near(r.parts.reduce((s, p) => s + p.N, 0) * r.factor, r.required)));
+      check('sideways: with μ = 0.5 each m/s² costs as much as 2 m/s² of lift (a/μ)',
+        near(V.requirement({ ...base, loadCase: 'II', a: 1 }).demand - V.requirement({ ...base, loadCase: 'II', a: 0 }).demand,
+          2 * (V.requirement({ ...base, loadCase: 'I', a: 1 }).demand - V.requirement({ ...base, loadCase: 'I', a: 0 }).demand)));
+      check('at a = 0, cases I and II need the same; case III needs 1/μ times more',
+        near(V.requirement({ ...base, loadCase: 'I', a: 0 }).required, V.requirement({ ...base, loadCase: 'II', a: 0 }).required) &&
+        near(V.requirement({ ...base, loadCase: 'III', a: 0 }).required, 2 * V.requirement({ ...base, loadCase: 'I', a: 0 }).required));
+    }
+
+    // ---------- Limits are consistent with the requirement ----------
+    {
+      let ok = true;
+      for (let i = 0; i < 300; i++) {
+        const loadCase = V.LOAD_CASES[i % 3];
+        const convention = i % 5 === 0 ? 'smc' : 'schmalz';
+        const p = { convention, loadCase, m: 0.01 + Math.random() * 50, a: Math.random() * 50, mu: 0.1 + Math.random() * 0.5, S: [1.5, 2, 2.5][i % 3], g: G0 };
+        const F = V.holdingForce(-10 - Math.random() * 80, 0.005 + Math.random() * 0.145, 1 + (i % 8));
+        const mMax = V.maxMass(F, p);
+        if (!near(V.requirement({ ...p, m: mMax }).required, F, 1e-9)) ok = false;
+        const aMax = V.maxAcceleration(F, p);
+        if (convention === 'smc' ? aMax !== null : !near(V.requirement({ ...p, a: aMax }).required, F, 1e-9)) ok = false;
+      }
+      check('300 random setups: required force at the max mass, and at the max acceleration, equals the holding force', ok);
+    }
+    check('max acceleration is negative when the cups cannot hold the load at rest',
+      V.maxAcceleration(10, { convention: 'schmalz', loadCase: 'I', m: 1, mu: 0.5, S: 1.5, g: G0 }) < 0);
+
+    // ---------- Sizing helpers ----------
+    {
+      const sizes = D.SMC_PAD_DIAMETERS_MM;
+      const d = V.smallestPassingSize(1822, -60, 6, sizes);
+      check('smallest SMC size for 1,822 N on 6 cups at −60 kPa: ø80 gives 301.6 N each (too little), so ø100',
+        d === 0.1 && V.holdingForce(-60, 0.08).toFixed(1) === '301.6');
+      check('no size within the limit → null', V.smallestPassingSize(1e6, -60, 1, sizes, 150) === null);
+      check('vacuum needed: 117.8 N from one ø50 cup needs 60 kPa', near(V.vacuumForForce(V.holdingForce(-60, 0.05), 0.05), 60));
+      check('1 kgf = 9.80665 N', near(V.toKgf(9.80665), 1));
+    }
+
+    // ---------- Explainer worked example (Schmalz vs SMC on the same sheet, g = 9.81) ----------
+    {
+      const m = 61.33;
+      const smcII = V.requirement({ convention: 'smc', loadCase: 'II', m, a: 5, mu: 0.5, S: 1.5, g: 9.81 }).required;
+      const smcIII = V.requirement({ convention: 'smc', loadCase: 'III', m, a: 5, mu: 0.5, S: 2, g: 9.81 }).required;
+      check('SMC on the sheet: 4 × 61.33 × 9.81 = 2,407 N, 401 N per cup on 6, needs ø92 mm → ø100 pads',
+        Math.round(smcII) === 2407 && Math.round(smcII / 6) === 401 &&
+        Math.round(V.diameterForForce(smcII / 6, -60) * 1000) === 92 && V.smallestPassingSize(smcII, -60, 6, D.SMC_PAD_DIAMETERS_MM) === 0.1);
+      check('  Schmalz 304 N per cup needs an effective ø80 mm at −60 kPa', Math.round(V.diameterForForce(1822 / 6, -60) * 1000) === 80);
+      check('  SMC asks for 32% more than Schmalz in case II (2,407 vs 1,822 N) and case III (4,813 vs 3,633 N)',
+        Math.round((smcII / 1822 - 1) * 100) === 32 && Math.round(smcIII) === 4813 && Math.round((smcIII / 3633 - 1) * 100) === 32);
+    }
+
+    check('Schmalz (μ 0.5, S 1.5) asks for more than SMC (t = 4) once sideways acceleration passes 8.2 m/s²', (() => {
+      const cross = 0.5 * ((4 * G0) / 1.5 - G0);
+      const at = (a) => V.requirement({ convention: 'schmalz', loadCase: 'II', m: 1, a, mu: 0.5, S: 1.5, g: G0 }).required -
+        V.requirement({ convention: 'smc', loadCase: 'II', m: 1, a, mu: 0.5, S: 1.5, g: G0 }).required;
+      return cross.toFixed(1) === '8.2' && Math.abs(at(cross)) < 1e-9 && at(cross - 0.1) < 0 && at(cross + 0.1) > 0;
+    })());
+    check('glass pane preset: 0.5 × 0.4 × 0.004 m at 2,500 kg/m³ (Schmalz: glass 2.50 kg/dm³) = 2 kg',
+      near(0.5 * 0.4 * 0.004 * D.DENSITY_KG_M3.glass, 2));
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`suction-cup-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

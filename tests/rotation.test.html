@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>rotation-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>rotation-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/rotation.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as M from '../js/rotation-model.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const nearV = (a, b, eps = 1e-9) => a.every((v, i) => Math.abs(v - b[i]) <= eps);
+    const nearM = (A, B, eps = 1e-9) => M.maxAbsDiff(A, B) <= eps;
+    const d = M.toRad;
+    // Seeded random numbers so a failure can be reproduced
+    let seed = 12345;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    const randAngle = () => (rand() * 2 - 1) * Math.PI;
+    const randStep = () => {
+      const type = M.STEP_TYPES[Math.floor(rand() * 4)];
+      return { type, deg: (rand() * 2 - 1) * 180, p: [rand() - 0.5, rand() - 0.5, rand() - 0.5] };
+    };
+    const sameRotation = (q1, q2, eps = 1e-9) => nearV(q1, q2, eps) || nearV(q1, q2.map((c) => -c), eps);
+
+    // --- Known small cases ---
+    check('Rz(90°) maps x to y', nearV(M.mulVec3(M.rotZ(d(90)), [1, 0, 0]), [0, 1, 0], 1e-15));
+    check('Rx(90°) maps y to z', nearV(M.mulVec3(M.rotX(d(90)), [0, 1, 0]), [0, 0, 1], 1e-15));
+    check('Ry(90°) maps z to x (and x to −z)',
+      nearV(M.mulVec3(M.rotY(d(90)), [0, 0, 1]), [1, 0, 0], 1e-15) && nearV(M.mulVec3(M.rotY(d(90)), [1, 0, 0]), [0, 0, -1], 1e-15));
+    check('columns of Rz(30°) are its turned x, y, z axes',
+      nearV(M.column3(M.rotZ(d(30)), 0), M.mulVec3(M.rotZ(d(30)), [1, 0, 0])) && nearV(M.column3(M.rotZ(d(30)), 2), [0, 0, 1]));
+    check('rotAxis about x, y, z matches Rx, Ry, Rz (40°)',
+      nearM(M.rotAxis([1, 0, 0], d(40)), M.rotX(d(40))) && nearM(M.rotAxis([0, 1, 0], d(40)), M.rotY(d(40))) && nearM(M.rotAxis([0, 0, 1], d(40)), M.rotZ(d(40))));
+    check('det Rx(37°) = 1', near(M.det3(M.rotX(d(37))), 1));
+
+    // --- Worked example: order matters ---
+    const A = M.mul3(M.rotX(d(90)), M.rotY(d(90))); // Rx 90° then Ry 90°, intrinsic
+    const B = M.mul3(M.rotY(d(90)), M.rotX(d(90))); // Ry 90° then Rx 90°, intrinsic
+    check('worked example: Rx(90°)·Ry(90°) sends x to y', nearV(M.mulVec3(A, [1, 0, 0]), [0, 1, 0], 1e-15));
+    check('worked example: Ry(90°)·Rx(90°) sends x to −z', nearV(M.mulVec3(B, [1, 0, 0]), [0, 0, -1], 1e-15));
+    check('worked example: the two orders end 120° apart', near(M.toDeg(M.rotationAngleBetween(A, B)), 120, 1e-9));
+    const xyz = M.composeChain([{ type: 'rx', deg: 90 }, { type: 'ry', deg: 90 }, { type: 'rz', deg: 90 }], 'intrinsic').T;
+    const xyzRev = M.composeChain([{ type: 'rz', deg: 90 }, { type: 'ry', deg: 90 }, { type: 'rx', deg: 90 }], 'intrinsic').T;
+    check('X-Y-Z 90° each: the order and its reverse end 180° apart', near(M.toDeg(M.rotationAngleBetween(M.rotPart(xyz), M.rotPart(xyzRev))), 180, 1e-9));
+    check('X-Y-Z 90° each about the fixed axes equals Ry(90°)',
+      nearM(M.rotPart(M.composeChain([{ type: 'rx', deg: 90 }, { type: 'ry', deg: 90 }, { type: 'rz', deg: 90 }], 'extrinsic').T), M.rotY(d(90)), 1e-15));
+
+    // --- Random chains stay orthonormal with det 1 ---
+    {
+      let worstErr = 0;
+      let worstDet = 0;
+      for (let i = 0; i < 500; i++) {
+        const steps = Array.from({ length: 1 + Math.floor(rand() * 8) }, randStep);
+        for (const conv of ['intrinsic', 'extrinsic']) {
+          const R = M.rotPart(M.composeChain(steps, conv).T);
+          worstErr = Math.max(worstErr, M.orthonormalityError(R));
+          worstDet = Math.max(worstDet, Math.abs(M.det3(R) - 1));
+        }
+      }
+      check(`500 random chains: RᵀR = I within 1e-14 (worst ${worstErr.toExponential(1)})`, worstErr < 1e-14);
+      check(`500 random chains: det R = 1 within 1e-14 (worst ${worstDet.toExponential(1)})`, worstDet < 1e-14);
+    }
+    {
+      // A rotation chain 10,000 steps long still checks out (errors grow only slowly)
+      const steps = Array.from({ length: 10000 }, () => ({ type: ['rx', 'ry', 'rz'][Math.floor(rand() * 3)], deg: (rand() * 2 - 1) * 180 }));
+      const err = M.orthonormalityError(M.rotPart(M.composeChain(steps).T));
+      check(`10,000-step chain: RᵀR = I within 1e-12 (got ${err.toExponential(1)})`, err < 1e-12);
+    }
+
+    // --- Intrinsic vs extrinsic ---
+    {
+      let ok = true;
+      for (let i = 0; i < 200; i++) {
+        const [a, b, c] = [randAngle(), randAngle(), randAngle()].map(M.toDeg);
+        const intr = M.composeChain([{ type: 'rx', deg: a }, { type: 'ry', deg: b }, { type: 'rz', deg: c }], 'intrinsic').T;
+        const extr = M.composeChain([{ type: 'rz', deg: c }, { type: 'ry', deg: b }, { type: 'rx', deg: a }], 'extrinsic').T;
+        if (!nearM(intr, extr, 1e-12)) ok = false;
+      }
+      check('intrinsic X-Y-Z equals extrinsic Z-Y-X of the same angles (200 random sets)', ok);
+    }
+    {
+      let ok = true;
+      for (let i = 0; i < 200; i++) {
+        const steps = Array.from({ length: 1 + Math.floor(rand() * 6) }, randStep);
+        const a = M.composeChain(steps, 'intrinsic').T;
+        const b = M.composeChain(M.reversedSteps(steps), 'extrinsic').T;
+        if (!nearM(a, b, 1e-12)) ok = false;
+      }
+      check('any chain (with translations): intrinsic = reversed order extrinsic (200 random chains)', ok);
+    }
+    check('intrinsic composeChain = R1·R2 (post-multiply)',
+      nearM(M.rotPart(M.composeChain([{ type: 'rz', deg: 30 }, { type: 'rx', deg: 50 }]).T), M.mul3(M.rotZ(d(30)), M.rotX(d(50)))));
+    check('extrinsic composeChain = R2·R1 (pre-multiply)',
+      nearM(M.rotPart(M.composeChain([{ type: 'rz', deg: 30 }, { type: 'rx', deg: 50 }], 'extrinsic').T), M.mul3(M.rotX(d(50)), M.rotZ(d(30)))));
+    {
+      const steps = [{ type: 'rx', deg: 90 }, { type: 'ry', deg: 60 }];
+      const half = M.composeChain(steps, 'intrinsic', 1.5);
+      check('animation progress 1.5 = first step + half of the second', nearM(half.T, M.mul4(M.stepTransform(steps[0]), M.stepTransform(steps[1], 0.5))) && half.frames.length === 3);
+      check('progress 0 is the identity with one frame', nearM(M.composeChain(steps, 'intrinsic', 0).T, M.identity4()) && M.composeChain(steps, 'intrinsic', 0).frames.length === 1);
+    }
+
+    // --- Translate then rotate vs rotate then translate ---
+    {
+      const tr = M.composeChain([{ type: 't', p: [0.4, 0, 0] }, { type: 'rz', deg: 90 }]).T;
+      const rt = M.composeChain([{ type: 'rz', deg: 90 }, { type: 't', p: [0.4, 0, 0] }]).T;
+      check('translate 0.4 m along x then Rz(90°): origin at (0.4, 0, 0)', nearV(M.transPart(tr), [0.4, 0, 0], 1e-15));
+      check('Rz(90°) then translate 0.4 m along the new x: origin at (0, 0.4, 0)', nearV(M.transPart(rt), [0, 0.4, 0], 1e-15));
+      check('… and both end facing the same way', nearM(M.rotPart(tr), M.rotPart(rt), 1e-15));
+    }
+    {
+      // Two-link arm preset: yaw 30°, shoulder −40°, 0.45 m, elbow 70°, 0.35 m
+      const arm = [{ type: 'rz', deg: 30 }, { type: 'ry', deg: -40 }, { type: 't', p: [0.45, 0, 0] }, { type: 'ry', deg: 70 }, { type: 't', p: [0.35, 0, 0] }];
+      const { T, frames } = M.composeChain(arm);
+      const elbow = M.transPart(frames[3]);
+      check('two-link arm: elbow 0.45 m from the base', near(M.norm3(elbow), 0.45));
+      check('two-link arm: hand 0.35 m from the elbow', near(M.norm3(M.sub3(M.transPart(T), elbow)), 0.35));
+      check('two-link arm: elbow raised by 0.45 sin 40°', near(elbow[2], 0.45 * Math.sin(d(40))));
+    }
+
+    // --- Homogeneous inverse ---
+    {
+      let ok = true;
+      for (let i = 0; i < 200; i++) {
+        const T = M.composeChain(Array.from({ length: 5 }, randStep)).T;
+        if (!nearM(M.mul4(T, M.invertRigid(T)), M.identity4(), 1e-12) || !nearM(M.mul4(M.invertRigid(T), T), M.identity4(), 1e-12)) ok = false;
+      }
+      check('T·T⁻¹ = T⁻¹·T = I for 200 random rigid transforms', ok);
+      const T = M.homog(M.rotZ(d(90)), [1, 2, 3]);
+      check('inverse of [Rz(90°), (1, 2, 3)] has −Rᵀp = (−2, 1, −3)', nearV(M.transPart(M.invertRigid(T)), [-2, 1, -3], 1e-15));
+      check('applyPoint: T moves the point (1, 0, 0) to (1, 3, 3)', nearV(M.applyPoint(T, [1, 0, 0]), [1, 3, 3], 1e-15));
+    }
+
+    // --- Quaternions ---
+    {
+      let okRound = true;
+      let okMul = true;
+      let okUnit = true;
+      for (let i = 0; i < 300; i++) {
+        const q = M.quatCanonical(M.quatNormalize([rand() - 0.5, rand() - 0.5, rand() - 0.5, rand() - 0.5]));
+        if (!sameRotation(M.quatFromMatrix(M.matrixFromQuat(q)), q, 1e-12)) okRound = false;
+        const R = M.rotPart(M.composeChain(Array.from({ length: 4 }, randStep)).T);
+        if (!nearM(M.matrixFromQuat(M.quatFromMatrix(R)), R, 1e-12)) okRound = false;
+        if (Math.abs(Math.hypot(...M.quatFromMatrix(R)) - 1) > 1e-12) okUnit = false;
+        const p = M.quatNormalize([rand() - 0.5, rand() - 0.5, rand() - 0.5, rand() - 0.5]);
+        if (!nearM(M.matrixFromQuat(M.quatMul(q, p)), M.mul3(M.matrixFromQuat(q), M.matrixFromQuat(p)), 1e-12)) okMul = false;
+      }
+      check('quaternion → matrix → quaternion and matrix → quaternion → matrix round trips (300 each)', okRound);
+      check('quatFromMatrix returns unit quaternions', okUnit);
+      check('Hamilton product: R(q ⊗ p) = R(q)·R(p)', okMul);
+    }
+    check('quaternion of Rz(90°) = (cos 45°, 0, 0, sin 45°)', nearV(M.quatFromMatrix(M.rotZ(d(90))), [Math.SQRT1_2, 0, 0, Math.SQRT1_2], 1e-15));
+    check('half turns (trace −1) convert both ways', [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, -2, 3]].every((n) =>
+      nearM(M.matrixFromQuat(M.quatFromMatrix(M.rotAxis(n, Math.PI))), M.rotAxis(n, Math.PI), 1e-12)));
+    check('quatFromAxisAngle matches rotAxis (axis (1, 2, 2), 75°)', nearM(M.matrixFromQuat(M.quatFromAxisAngle([1, 2, 2], d(75))), M.rotAxis([1, 2, 2], d(75))));
+    check('quatCanonical makes w ≥ 0', M.quatCanonical([-0.5, 0.5, 0.5, 0.5])[0] === 0.5);
+    {
+      let ok = true;
+      for (let i = 0; i < 200; i++) {
+        const [y, p, r] = [randAngle(), randAngle() / 2, randAngle()];
+        if (!sameRotation(M.quatFromEulerZYX(y, p, r), M.quatFromMatrix(M.eulerZYXToMatrix(y, p, r)), 1e-12)) ok = false;
+      }
+      check('Diebel eq. 84 Euler → quaternion agrees with the matrix route (200 random sets)', ok);
+    }
+    {
+      const a = M.quatFromAxisAngle([0, 0, 1], 0);
+      const b = M.quatFromAxisAngle([0, 0, 1], d(90));
+      check('slerp half way from 0° to 90° about z is 45° about z', sameRotation(M.quatSlerp(a, b, 0.5), M.quatFromAxisAngle([0, 0, 1], d(45)), 1e-12));
+      const q1 = M.quatFromEulerZYX(d(10), d(20), d(30));
+      const q2 = M.quatFromEulerZYX(d(-50), d(80), d(5));
+      const total = M.rotationAngleBetween(M.matrixFromQuat(q1), M.matrixFromQuat(q2));
+      const mid = M.quatSlerp(q1, q2, 0.3);
+      check('slerp moves at constant rate: 30% of the way is 30% of the angle',
+        near(M.rotationAngleBetween(M.matrixFromQuat(q1), M.matrixFromQuat(mid)), 0.3 * total, 1e-9));
+    }
+
+    // --- Euler ZYX ---
+    {
+      let ok = true;
+      for (let i = 0; i < 500; i++) {
+        const y = randAngle();
+        const p = (rand() * 2 - 1) * d(89); // away from the singularity
+        const r = randAngle();
+        const e = M.matrixToEulerZYX(M.eulerZYXToMatrix(y, p, r));
+        if (e.singular || !near(e.yaw, y, 1e-9) || !near(e.pitch, p, 1e-9) || !near(e.roll, r, 1e-9)) ok = false;
+      }
+      check('Euler ZYX → matrix → Euler round trip for |pitch| < 89° (500 random sets)', ok);
+    }
+    check('eulerZYXToMatrix(ψ, θ, φ) = Rz(ψ)·Ry(θ)·Rx(φ) = intrinsic chain Rz, Ry, Rx',
+      nearM(M.eulerZYXToMatrix(d(20), d(30), d(40)), M.rotPart(M.composeChain([{ type: 'rz', deg: 20 }, { type: 'ry', deg: 30 }, { type: 'rx', deg: 40 }]).T)));
+    {
+      // At pitch +90° only ψ − φ matters; at −90° only ψ + φ
+      const R1 = M.eulerZYXToMatrix(d(30), d(90), d(50));
+      const R2 = M.eulerZYXToMatrix(d(60), d(90), d(80)); // same φ − ψ = 20°
+      const R3 = M.eulerZYXToMatrix(d(30), d(90), d(80)); // φ − ψ = 50°
+      check('pitch 90°: (ψ, φ) = (30°, 50°) and (60°, 80°) give the same orientation', nearM(R1, R2, 1e-12));
+      check('pitch 90°: a different φ − ψ gives a different orientation (30° apart)', near(M.toDeg(M.rotationAngleBetween(R1, R3)), 30, 1e-9));
+      check('pitch −90°: only ψ + φ matters', nearM(M.eulerZYXToMatrix(d(30), d(-90), d(50)), M.eulerZYXToMatrix(d(70), d(-90), d(10)), 1e-12));
+      const e = M.matrixToEulerZYX(R1);
+      check('pitch 90°: extraction flags the singularity and returns ψ = 0, φ = φ − ψ = 20°',
+        e.singular && e.yaw === 0 && near(e.pitch, Math.PI / 2) && near(M.toDeg(e.roll), 20, 1e-9));
+      check('pitch 90°: the extracted angles rebuild the same matrix', nearM(M.eulerZYXToMatrix(e.yaw, e.pitch, e.roll), R1, 1e-12));
+      const e2 = M.matrixToEulerZYX(M.eulerZYXToMatrix(d(30), d(-90), d(50)));
+      check('pitch −90°: extraction gives ψ = 0, φ = ψ + φ = 80°', e2.singular && near(M.toDeg(e2.roll), 80, 1e-9) && near(e2.pitch, -Math.PI / 2));
+      // Nudges: yaw +10° and roll −10° are the same motion at pitch 90°, different at 0°
+      const nudgeGap = (pitch) => M.toDeg(M.rotationAngleBetween(M.eulerZYXToMatrix(d(40), d(pitch), d(20)), M.eulerZYXToMatrix(d(30), d(pitch), d(10))));
+      check('pitch 90°: yaw +10° and roll −10° end 0° apart', nudgeGap(90) < 1e-6);
+      check('pitch 0°: yaw +10° and roll −10° end 14.1° apart', Math.abs(nudgeGap(0) - 14.1) < 0.05);
+    }
+    {
+      const q = M.quatFromEulerZYX(d(30), d(90), d(50));
+      check('quaternion at gimbal lock is a normal unit quaternion', near(Math.hypot(...q), 1));
+      let maxStep = 0;
+      let prev = M.quatFromEulerZYX(d(30), d(80), d(50));
+      for (let p = 80.1; p <= 100.0001; p += 0.1) {
+        const qq = M.quatFromEulerZYX(d(30), d(p), d(50));
+        maxStep = Math.max(maxStep, Math.hypot(...qq.map((c, i) => c - prev[i])));
+        prev = qq;
+      }
+      check('quaternion changes smoothly through pitch 90° (largest step per 0.1° below 0.001)', maxStep < 1e-3);
+    }
+
+    // --- Gimbal geometry ---
+    check('gimbal det = cos θ (pitch 0°, 60°, 90°)',
+      near(M.gimbalDeterminant(d(25), 0), 1) && near(M.gimbalDeterminant(d(25), d(60)), 0.5) && Math.abs(M.gimbalDeterminant(d(25), d(90))) < 1e-15);
+    {
+      const ax = M.gimbalAxes(d(25), d(90));
+      check('pitch 90°: yaw and roll axes are parallel (0° apart)', M.lineAngle(ax.yaw, ax.roll) < 1e-7);
+      const ax0 = M.gimbalAxes(d(25), 0);
+      check('pitch 0°: the three gimbal axes are mutually perpendicular',
+        near(M.lineAngle(ax0.yaw, ax0.roll), Math.PI / 2) && near(M.lineAngle(ax0.yaw, ax0.pitch), Math.PI / 2) && near(M.lineAngle(ax0.pitch, ax0.roll), Math.PI / 2));
+      check('pitch 75°: yaw and roll axes 15° apart', near(M.toDeg(M.lineAngle(M.gimbalAxes(0, d(75)).yaw, M.gimbalAxes(0, d(75)).roll)), 15, 1e-9));
+    }
+    {
+      // Interpolation demo: (−80°, 85°, 80°) → (80°, 85°, −80°)
+      const a = [-80, 85, 80].map(d);
+      const b = [80, 85, -80].map(d);
+      const slerpDeg = M.toDeg(M.rotationAngleBetween(M.eulerZYXToMatrix(...a), M.eulerZYXToMatrix(...b)));
+      const eulerDeg = M.toDeg(M.eulerPathTurning(a, b));
+      check(`interpolation demo: slerp turns 41° (got ${slerpDeg.toFixed(2)})`, Math.round(slerpDeg) === 41);
+      check(`interpolation demo: Euler-angle path turns 320° in total (got ${eulerDeg.toFixed(2)})`, Math.round(eulerDeg) === 320);
+      check('eulerPathTurning of a pure yaw sweep equals its angle', near(M.eulerPathTurning([0, 0, 0], [d(70), 0, 0]), d(70), 1e-9));
+    }
+
+    // --- Axis-angle ---
+    {
+      const aa = M.axisAngleFromMatrix(M.rotAxis([1, 2, 2], d(75)));
+      check('axis-angle of a 75° turn about (1, 2, 2)/3', nearV(aa.axis, [1 / 3, 2 / 3, 2 / 3], 1e-12) && near(M.toDeg(aa.angle), 75, 1e-9));
+      const half = M.axisAngleFromMatrix(M.rotAxis([0, 1, 0], Math.PI));
+      check('axis-angle of a half turn about y', near(M.toDeg(half.angle), 180, 1e-9) && near(Math.abs(half.axis[1]), 1, 1e-12));
+      check('axis-angle of the identity is 0° (axis undefined)', M.axisAngleFromMatrix(M.identity3()).angle === 0 && !M.axisAngleFromMatrix(M.identity3()).defined);
+      const xyzAA = M.axisAngleFromMatrix(M.rotPart(xyz));
+      check('X-Y-Z 90° each (intrinsic) is one 180° turn about (1, 0, 1)/√2',
+        near(M.toDeg(xyzAA.angle), 180, 1e-9) && nearV(xyzAA.axis.map(Math.abs), [Math.SQRT1_2, 0, Math.SQRT1_2], 1e-12));
+    }
+
+    // --- Validator ---
+    {
+      const ok = M.validateRotation(M.eulerZYXToMatrix(0.3, -0.7, 1.1));
+      check('validator accepts a rotation', ok.valid && ok.problems.length === 0);
+      check('validator accepts a rotation typed to 3 decimals (Rz(30°))',
+        M.validateRotation([[0.866, -0.5, 0], [0.5, 0.866, 0], [0, 0, 1]]).valid);
+      const refl = M.validateRotation([[1, 0, 0], [0, 1, 0], [0, 0, -1]]);
+      check('validator: diag(1, 1, −1) is a reflection with det = −1',
+        !refl.valid && refl.problems.length === 1 && refl.problems[0].kind === 'reflection' && refl.problems[0].text === 'det = −1: a reflection, not a rotation');
+      const long = M.validateRotation([[1, 0, 0], [0, 1, 0], [0, 0, 1.2]]);
+      check('validator: column 3 has length 1.2',
+        !long.valid && long.problems.some((p) => p.kind === 'length' && p.text === 'column 3 has length 1.2'));
+      const skew = M.validateRotation([[1, 0.1, 0], [0, 0.995, 0], [0, 0, 1]]);
+      check('validator: columns 1 and 2 are not perpendicular',
+        !skew.valid && skew.problems.some((p) => p.kind === 'perpendicular' && p.text.startsWith('columns 1 and 2 are not perpendicular')));
+      const flat = M.validateRotation([[1, 0, 0], [0, 1, 0], [0, 0, 0]]);
+      check('validator: a zero column is flagged as singular', !flat.valid && flat.problems.some((p) => p.kind === 'singular'));
+      const nan = M.validateRotation([[1, 0, 0], [0, NaN, 0], [0, 0, 1]]);
+      check('validator: a blank entry is reported by position', !nan.valid && nan.problems[0].text === 'row 2, column 2 is not a number');
+      const scaled = M.validateRotation(M.rotZ(d(30)).map((r) => r.map((v) => v * 2)));
+      check('validator: 2 × Rz(30°) has three wrong lengths', scaled.problems.filter((p) => p.kind === 'length').length === 3);
+      check('validator: RᵀR − I error reported (0 for the identity)', M.validateRotation(M.identity3()).orthoError === 0);
+    }
+    check('trimNum: no float noise, no −0', M.trimNum(1.2000000001) === '1.2' && M.trimNum(-0.0000001) === '0' && M.trimNum(-1) === '−1');
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`rotation-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

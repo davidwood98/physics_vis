@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>rutherford-model.js tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>rutherford-model.js tests</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/rutherford.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as R from '../js/rutherford-model.js';
+    import { CONSTANTS as C, TARGETS, AIR, ALPHA_SOURCES, HISTORY } from '../js/data/rutherford-data.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const rel = (a, b, r) => Math.abs(a - b) <= r * Math.abs(b);
+    const FM = R.FM;
+    const DEG = R.DEG;
+    const k = R.coulombMeVm(C.fineStructure, C.hbarcMeVfm);
+    const z = C.alphaChargeZ;
+    const gold = R.targetProperties(TARGETS.gold, C);
+    const plat = R.targetProperties(TARGETS.platinum, C);
+    const alu = R.targetProperties(TARGETS.aluminium, C);
+    const setupFor = (p, E, t) => R.scatteringSetup({ E, t, p, z, kMeVm: k });
+    const au5 = setupFor(gold, 5, 1e-6);
+
+    // --- constants ---
+    check('e²/(4πε₀) = α·ħc = 1.43996 MeV·fm', rel(k / FM, 1.43996, 1e-5));
+    check('alpha charge is +2e', z === 2);
+
+    // --- gold drawn at 1 cm per atom ---
+    check('gold nearest-neighbour distance a/√2 = 0.2884 nm', rel(gold.dnn, 2.8840e-10, 1e-4));
+    check('1 cm per atom magnifies gold about 34.7 million times', rel(0.01 / gold.dnn, 3.4674e7, 1e-4));
+    check('gold: 5.907 × 10²⁸ atoms per m³ from density and molar mass', rel(gold.n, 5.907e28, 1e-3));
+    check('...within 0.3% of 4 atoms per lattice cube (4/a³)', rel(gold.n, 4 / gold.a ** 3, 3e-3));
+    check('gold nucleus edge (uniform sphere, rms 5.4358 fm) = 7.02 fm', rel(gold.radius / FM, 7.018, 1e-3));
+    check('gold nucleus drawn about 0.49 µm across at 1 cm per atom (sub-pixel)',
+      rel(2 * gold.radius * (0.01 / gold.dnn), 0.487e-6, 5e-3));
+    check('1 µm of gold is about 3,470 atom spacings', Math.round(1e-6 / gold.dnn) === 3467);
+
+    // --- the owner's figures ---
+    check('head-on 5 MeV alpha, fixed gold nucleus: d = 45.5 fm ("about 45 fm")', rel(au5.dFixed / FM, 45.50, 1e-3));
+    check('with recoil (centre of mass): d = 46.4 fm', rel(au5.d / FM, 46.43, 1e-3));
+    check('recoil changes d for gold by 2.0%', rel(au5.d / au5.dFixed - 1, 0.0203, 0.01));
+    check('d is 6.6 times the gold nucleus radius ("several times")', rel(au5.d / gold.radius, 6.62, 2e-3));
+    check('...and 8.5 times its rms charge radius', rel(au5.d / gold.rmsRadius, 8.54, 2e-3));
+    const p90 = R.probabilityBeyond(Math.PI / 2, au5);
+    check('5 MeV on 1 µm gold: P(θ > 90°) ≈ 1 in 10,400 (computed, not the 1909 figure)', Math.abs(1 / p90 - 10415) < 10);
+    check('5 MeV on 1 µm gold: P(θ > 10°) ≈ 1 in 80', Math.abs(1 / R.probabilityBeyond(10 * DEG, au5) - 79.7) < 0.3);
+    check('σ(>90°) for gold at 5 MeV ≈ 1,626 fm² (16.3 barn)', rel(R.crossSectionBeyond(R.cmAngle(Math.PI / 2, au5.massRatio), au5.d) / FM ** 2, 1625.5, 1e-3));
+    check('b_max for 1 µm gold = 2.32 pm, smallest turn 1.12°', rel(au5.bMax, 2.321e-12, 1e-3) && Math.abs(au5.minAngle / DEG - 1.123) < 0.002);
+
+    // --- one encounter ---
+    {
+      let ok = true;
+      for (const th of [0.01, 0.3, 1, 1.5707963, 2.5, 3.1]) {
+        if (!near(R.deflection(R.impactForAngle(th, au5.d), au5.d), th, 1e-12)) ok = false;
+      }
+      check('deflection ↔ impact parameter round trip', ok);
+    }
+    check('b = d/2 gives exactly 90° (centre of mass)', near(R.deflection(au5.d / 2, au5.d), Math.PI / 2, 1e-12));
+    check('head-on (b = 0): θ = 180° and r_min = d', near(R.deflection(0, au5.d), Math.PI) && near(R.closestApproach(0, au5.d), au5.d));
+    {
+      let ok = true;
+      for (const b of [1e-15, 2e-14, 3e-13, 2e-12]) {
+        const th = R.deflection(b, au5.d);
+        const formula = (au5.d / 2) * (1 + 1 / Math.sin(th / 2));
+        if (!near(R.closestApproach(b, au5.d), formula, 1e-9)) ok = false;
+      }
+      check('r_min = d/2 + √((d/2)² + b²) equals (d/2)(1 + 1/sin(θ/2))', ok);
+    }
+    {
+      let ok = true;
+      for (const th of [0.05, 0.7, 1.4, 2, 2.8]) {
+        if (!near(R.cmAngle(R.labAngle(th, 0.15), 0.15), th, 1e-10)) ok = false;
+      }
+      check('lab ↔ centre-of-mass angle round trip (m/M = 0.15)', ok);
+    }
+    check('lab angle = centre-of-mass angle for an infinitely heavy nucleus', near(R.labAngle(1.234, 0), 1.234));
+    check('90° in the lab is 91.16° in the centre of mass for gold', Math.abs(R.cmAngle(Math.PI / 2, gold.massRatio) / DEG - 91.164) < 0.002);
+    {
+      // Energy conservation along the hyperbola: at r_min, ½μv² = E_cm − kzZ/r_min, and L = μ v b gives v_min = v₀ b / r_min.
+      const b = 3e-14;
+      const rmin = R.closestApproach(b, au5.d);
+      const lhs = (b / rmin) ** 2;          // (v_min / v₀)²
+      const rhs = 1 - au5.d / rmin;         // 1 − (kzZ / E_cm) / r_min
+      check('r_min satisfies energy and angular-momentum conservation', near(lhs, rhs, 1e-9));
+    }
+    {
+      const b = 0.5 * au5.d;
+      const pts = R.hyperbolaPoints(b, au5.d, 20 * au5.d, 2000);
+      const rmin = Math.min(...pts.map(([x, y]) => Math.hypot(x, y)));
+      const [x1, y1] = pts[pts.length - 2];
+      const [x2, y2] = pts[pts.length - 1];
+      const outDir = Math.atan2(y2 - y1, x2 - x1);
+      check('hyperbola: nearest point is r_min', rel(rmin, R.closestApproach(b, au5.d), 1e-4));
+      check('hyperbola: leaves at the deflection angle (90° here)', Math.abs(outDir - Math.PI / 2) < 0.06);
+      check('hyperbola: starts and ends on r = rMax', rel(Math.hypot(...pts[0]), 20 * au5.d, 1e-6) && rel(Math.hypot(x2, y2), 20 * au5.d, 1e-6));
+      check('hyperbola: arrives from the left at height b', pts[0][0] < 0 && Math.abs(pts[0][1] - b) < 0.05 * au5.d);
+      check('hyperbola: negative b mirrors it', near(R.hyperbolaPoints(-b, au5.d, 20 * au5.d, 50)[10][1], -R.hyperbolaPoints(b, au5.d, 20 * au5.d, 50)[10][1]));
+    }
+
+    // --- touching: where the point-charge model breaks down ---
+    const rAlpha = R.uniformSphereRadius(C.alphaRmsRadiusFm * FM);
+    check('alpha edge (uniform sphere, rms 1.6785 fm) = 2.17 fm', rel(rAlpha / FM, 2.167, 1e-3));
+    check('gold: alphas touch the nucleus above about 25 MeV', rel(R.energyToReach(z, gold.Z, k, gold.radius + rAlpha, gold.massRatio), 25.27, 2e-3));
+    check('aluminium: above about 7.0 MeV (inside the 1-10 MeV range)', rel(R.energyToReach(z, alu.Z, k, alu.radius + rAlpha, alu.massRatio), 7.03, 3e-3));
+
+    // --- cross-sections ---
+    {
+      // 2π ∫ dσ/dΩ sin θ dθ from θ0 to π equals σ(>θ0)
+      const th0 = 0.6;
+      let s = 0;
+      const n = 20000;
+      for (let i = 0; i < n; i++) {
+        const th = th0 + ((i + 0.5) * (Math.PI - th0)) / n;
+        s += R.diffCrossSection(th, au5.d) * Math.sin(th) * ((Math.PI - th0) / n);
+      }
+      check('∫ dσ/dΩ dΩ beyond θ = π(d/2)²cot²(θ/2)', rel(2 * Math.PI * s, R.crossSectionBeyond(th0, au5.d), 1e-6));
+    }
+    {
+      // Lab dσ/dΩ integrates to the lab probabilities (aluminium, where recoil matters)
+      const s = setupFor(alu, 5, 1e-6);
+      const a = 40 * DEG;
+      const bb = 120 * DEG;
+      let sum = 0;
+      const n = 20000;
+      for (let i = 0; i < n; i++) {
+        const th = a + ((i + 0.5) * (bb - a)) / n;
+        sum += R.diffCrossSectionLab(th, s.d, s.massRatio) * Math.sin(th) * ((bb - a) / n);
+      }
+      const fromP = (R.probabilityBeyond(a, s) - R.probabilityBeyond(bb, s)) / s.nt;
+      check('lab dσ/dΩ (with recoil Jacobian) integrates to the lab σ', rel(2 * Math.PI * sum, fromP, 1e-5));
+    }
+    check('dσ/dΩ at 90° for 5 MeV gold ≈ 539 fm²/sr (centre of mass)', rel(R.diffCrossSection(Math.PI / 2, au5.d) / FM ** 2, 538.9, 2e-3));
+
+    // --- Monte Carlo ---
+    {
+      const rng = R.seededRandom(12345);
+      const tally = R.newTally(5);
+      R.fireMany(1e6, au5, tally, rng);
+      const expected = 1e6 * p90;
+      check('1,000,000 alphas: count beyond 90° within 4σ of N·n·t·σ', Math.abs(tally.beyond90 - expected) < 4 * Math.sqrt(expected));
+      const e10 = 1e6 * R.probabilityBeyond(10 * DEG, au5);
+      check('1,000,000 alphas: count beyond 10° within 4σ', Math.abs(tally.beyond10 - e10) < 4 * Math.sqrt(e10));
+      const exp = R.expectedBins(1e6, au5, 5, 36);
+      check('expected bin counts add up to N', rel(exp.reduce((a, b) => a + b, 0), 1e6, 1e-9));
+      check('histogram counts add up to N', tally.bins.reduce((a, b) => a + b, 0) === 1e6);
+      let ok = true;
+      for (let i = 0; i < 36; i++) if (exp[i] > 50 && Math.abs(tally.bins[i] - exp[i]) > 5 * Math.sqrt(exp[i])) ok = false;
+      check('every well-filled bin agrees with the Rutherford prediction (5σ)', ok);
+      check('the latest alpha is recorded', tally.latest && tally.latest.b > 0 && tally.latest.b <= au5.bMax);
+      check('no alpha turns less than the b_max minimum', tally.bins[0] > 0 && R.scatterOne(1, au5).theta >= au5.minAngle - 1e-12);
+    }
+    check('binIndex: 0° → 0, 92° → 18, 180° → 35', R.binIndex(0, 5, 36) === 0 && R.binIndex(92 * DEG, 5, 36) === 18 && R.binIndex(Math.PI, 5, 36) === 35);
+
+    // --- energy loss (ASTAR) ---
+    check('CSDA range reproduces a table row (gold, 5 MeV: 0.01752 g/cm²)', rel(R.csdaRange(TARGETS.gold.range, 5), 0.1752, 1e-9));
+    check('energy ↔ range round trip', rel(R.energyForRange(TARGETS.gold.range, R.csdaRange(TARGETS.gold.range, 6.3)), 6.3, 1e-6));
+    const eOut = R.energyAfter(TARGETS.gold.range, 5, 1e-6 * TARGETS.gold.densityGcm3 * 1000);
+    check('5 MeV alpha loses about 0.46 MeV crossing 1 µm of gold', Math.abs(5 - eOut - 0.462) < 0.002);
+    check('a 1 MeV alpha stops inside 5 µm of gold (range about 2 µm)', R.energyAfter(TARGETS.gold.range, 1, 5e-6 * 19320) === 0
+      && rel(R.csdaRange(TARGETS.gold.range, 1) / 19320, 2.06e-6, 0.01));
+    const e1909 = R.energyAfter(AIR.range, ALPHA_SOURCES.po214.energyMeV, HISTORY.gm1909.airCm * 1e-2 * AIR.densityGcm3 * 1000);
+    check('radium C\' alphas (7.69 MeV) have about 7.0 MeV after 1 cm of air', Math.abs(e1909 - 6.99) < 0.02);
+    {
+      const s = setupFor(plat, e1909, 1e-6);
+      const n = 1 / R.probabilityBeyond(Math.PI / 2, s);
+      check('1909 rough check: 1 µm platinum at 7.0 MeV gives about 1 in 18,600 beyond 90°', Math.abs(n - 18614) < 20);
+    }
+
+    // --- speed and the plum pudding ---
+    check('5 MeV alpha moves at 5.2% of light speed (15,500 km/s)', rel(R.speedFraction(5, C.alphaMassMeV), 0.05174, 1e-3));
+    {
+      const dR = 1e-4;
+      check('plum pudding: largest single-atom turn = 1.022 × d/R', rel(R.thomsonMaxDeflection(dR) / dR, 1.02188, 1e-4));
+      // Direct check: integrate the transverse force of a uniform sphere along a straight path (s = 0.6).
+      const s = 0.6;
+      let sum = 0;
+      const n = 200000;
+      const L = 60; // in units of R
+      for (let i = 0; i < n; i++) {
+        const x = -L + ((i + 0.5) * 2 * L) / n;
+        const r = Math.hypot(x, s);
+        const F = r < 1 ? r : 1 / (r * r); // field of a uniform sphere, R = 1
+        sum += (F * s) / r * ((2 * L) / n);
+      }
+      // θ = ∫F⊥dx / (2E) with F in units of kzZ/R², so θ = (d/R)·∫/2; the tails beyond ±L add s/L².
+      check('plum-pudding formula matches a direct force integral', rel(R.thomsonDeflection(s, 1), (sum + s / (L * L)) / 2, 1e-4));
+      const thGold = R.thomsonMaxDeflection(au5.dFixed / gold.atomRadius);
+      check('plum pudding: one gold atom turns a 5 MeV alpha by at most about 0.02°', Math.abs(thGold / DEG - 0.0185) < 0.0005);
+      check('...and 3,470 such nudges add up to at most about 1.1°', Math.abs((thGold * Math.sqrt(1e-6 / gold.dnn)) / DEG - 1.09) < 0.02);
+    }
+    {
+      const vol = (4 / 3) * Math.PI * gold.radius ** 3 * gold.n;
+      check('the gold nucleus fills about 1 part in 12 trillion of the atom', Math.abs(1 / vol / 1e12 - 11.7) < 0.2);
+    }
+
+    check('the electrons of a gold atom are 0.022% of its mass', Math.abs((100 * 79 * C.electronMassU) / TARGETS.gold.molarMassG - 0.022) < 0.0005);
+    {
+      const tally = R.newTally(5);
+      R.record(tally, { b: 1e-14, thetaCm: 2, theta: 2, rMin: 5e-14 });
+      R.record(tally, { b: 1e-12, thetaCm: 0.05, theta: 0.05, rMin: 1e-12 });
+      check('record(): counts, bins and the latest back-scatter', tally.total === 2 && tally.beyond90 === 1 && tally.beyond10 === 1
+        && tally.bins[22] === 1 && tally.bins[0] === 1 && tally.lastBack === 1e-14);
+    }
+    check('every data target is face-centred cubic with a cited radius', Object.values(TARGETS).every((t) => t.structure === 'fcc' && t.rmsRadiusFm > 0 && t.range.length > 20));
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`rutherford-model.js: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>

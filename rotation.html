@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rotation Matrix &amp; Homogeneous Transform Composer: Order, Euler Angles, Gimbal Lock | Real-Scale Physics</title>
+  <meta name="description" content="Chain rotations and translations in a 3D view and watch the rotation matrix or 4×4 homogeneous transform update live. See why rotation order matters, intrinsic vs extrinsic axes, gimbal lock at 90° pitch, and the same orientation as a quaternion.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/rotation.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Rotation and homogeneous transform composer">
+  <meta property="og:description" content="Stack rotations in 3D, reorder them and watch the matrix change. Intrinsic vs extrinsic, gimbal lock and quaternions.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/rotation.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/rotation.js"></script>
+</head>
+<body data-view="chain" class="page-rotation">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Visualisations</p>
+      <h1>Rotations and homogeneous transforms</h1>
+      <p class="lead">Stack rotations and translations as a chain of coordinate frames and watch the matrix build up live. Drag the steps into a different order to see why rotation order matters, switch between turning about the moving axes or the fixed ones, then lock a gimbal and watch a degree of freedom disappear.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <fieldset class="segmented" id="view-toggle">
+            <legend class="visually-hidden">View</legend>
+            <input type="radio" name="view" id="view-chain" value="chain" checked>
+            <label for="view-chain">Chain composer</label>
+            <input type="radio" name="view" id="view-gimbal" value="gimbal">
+            <label for="view-gimbal">Gimbal lock</label>
+          </fieldset>
+          <p class="muted small toolbar-note">A 3D perspective view, not to scale: angles and matrices are exact, lengths are only for the picture.</p>
+        </div>
+
+        <div class="canvas-wrap rot-wrap">
+          <canvas id="sim-canvas" role="img" tabindex="0" aria-label="3D view of a chain of rotations" aria-describedby="sim-hint"></canvas>
+          <div class="rot-hud" id="rot-hud" role="group" aria-label="Live matrix and checks">
+            <p class="rot-hud-eq" id="hud-eq">–</p>
+            <p class="rot-hud-note" id="hud-note"></p>
+            <div class="rot-mat" id="hud-mat"></div>
+            <div class="rot-quat" id="hud-quat" data-view-only="gimbal"></div>
+            <ul class="rot-checks">
+              <li class="rot-check" id="chk-orth"></li>
+              <li class="rot-check" id="chk-det"></li>
+              <li class="rot-check" id="chk-gimbal" data-view-only="gimbal"></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Play steps</button>
+          <button type="button" class="btn btn-small" id="reset-view-btn">Reset view</button>
+
+          <fieldset class="segmented segmented--small" id="conv-toggle" data-view-only="chain">
+            <legend class="visually-hidden">Each step turns about</legend>
+            <input type="radio" name="conv" id="conv-intrinsic" value="intrinsic" checked>
+            <label for="conv-intrinsic">Moving axes (intrinsic)</label>
+            <input type="radio" name="conv" id="conv-extrinsic" value="extrinsic">
+            <label for="conv-extrinsic">Fixed axes (extrinsic)</label>
+          </fieldset>
+
+          <label class="check" data-view-only="chain"><input type="checkbox" id="ghost-check"> Compare reversed order</label>
+
+          <fieldset class="segmented segmented--small" id="mat-toggle" data-view-only="chain">
+            <legend class="visually-hidden">Matrix shown</legend>
+            <input type="radio" name="matsize" id="mat-3" value="3" checked>
+            <label for="mat-3">3&times;3 R</label>
+            <input type="radio" name="matsize" id="mat-4" value="4">
+            <label for="mat-4">4&times;4 T</label>
+          </fieldset>
+
+          <span class="rot-addbar" data-view-only="chain" role="group" aria-label="Add a step">
+            <span class="muted small">Add:</span>
+            <button type="button" class="btn btn-small" data-add="rx" aria-label="Add a rotation about x"><span>+ R<sub>x</sub></span></button>
+            <button type="button" class="btn btn-small" data-add="ry" aria-label="Add a rotation about y"><span>+ R<sub>y</sub></span></button>
+            <button type="button" class="btn btn-small" data-add="rz" aria-label="Add a rotation about z"><span>+ R<sub>z</sub></span></button>
+            <button type="button" class="btn btn-small" data-add="t" aria-label="Add a translation">+ T</button>
+            <button type="button" class="btn btn-small btn-ghost" id="clear-btn">Clear</button>
+          </span>
+
+          <span class="rot-nudges" data-view-only="gimbal" role="group" aria-label="Nudge yaw or roll by 10 degrees">
+            <span class="muted small">Nudge:</span>
+            <button type="button" class="btn btn-small" data-nudge="yaw" data-by="10">Yaw +10°</button>
+            <button type="button" class="btn btn-small" data-nudge="yaw" data-by="-10">Yaw &minus;10°</button>
+            <button type="button" class="btn btn-small" data-nudge="roll" data-by="10">Roll +10°</button>
+            <button type="button" class="btn btn-small" data-nudge="roll" data-by="-10">Roll &minus;10°</button>
+          </span>
+        </div>
+
+        <div class="rot-chain" data-view-only="chain">
+          <ol class="rot-steps" id="steps" aria-label="Chain of steps, applied left to right"></ol>
+        </div>
+
+        <div class="rot-gimbal" data-view-only="gimbal">
+          <div class="rot-gimbal-grid">
+            <div class="control">
+              <div class="control-head">
+                <label for="yaw-range">Yaw <var>&psi;</var> <span class="muted small">(about z)</span></label>
+                <span class="num-field">
+                  <input type="number" id="yaw-num" inputmode="decimal" aria-label="Yaw psi, degrees">
+                  <span class="unit" aria-hidden="true">°</span>
+                </span>
+              </div>
+              <input type="range" id="yaw-range">
+              <div class="range-hint" aria-hidden="true"><span>&minus;180°</span><span>180°</span></div>
+            </div>
+            <div class="control">
+              <div class="control-head">
+                <label for="pitch-range">Pitch <var>&theta;</var> <span class="muted small">(about the new y)</span></label>
+                <span class="num-field">
+                  <input type="number" id="pitch-num" inputmode="decimal" aria-label="Pitch theta, degrees">
+                  <span class="unit" aria-hidden="true">°</span>
+                </span>
+              </div>
+              <input type="range" id="pitch-range">
+              <div class="range-hint" aria-hidden="true"><span>&minus;90°</span><span>0</span><span>90°</span></div>
+            </div>
+            <div class="control">
+              <div class="control-head">
+                <label for="roll-range">Roll <var>&phi;</var> <span class="muted small">(about the newest x)</span></label>
+                <span class="num-field">
+                  <input type="number" id="roll-num" inputmode="decimal" aria-label="Roll phi, degrees">
+                  <span class="unit" aria-hidden="true">°</span>
+                </span>
+              </div>
+              <input type="range" id="roll-range">
+              <div class="range-hint" aria-hidden="true"><span>&minus;180°</span><span>180°</span></div>
+            </div>
+          </div>
+          <p class="result" id="nudge-result" aria-live="polite"></p>
+        </div>
+
+        <p class="sim-hint muted" id="sim-hint">
+          <span data-view-only="chain">Steps apply left to right. Drag a step by its handle (or focus the handle and use the arrow keys) to reorder it and watch the final frame move. Drag the view to orbit, scroll or pinch to zoom; with the view focused, the arrow keys orbit and <kbd>+</kbd>/<kbd>&minus;</kbd> zoom. <kbd>Space</kbd> plays the steps one by one.</span>
+          <span data-view-only="gimbal">Outer ring: yaw about the fixed z axis. Middle ring: pitch about the yawed y axis. Inner ring: roll about the object's own x axis. Push pitch to 90° and the yaw and roll axes line up. With z up, a positive pitch tips the nose down (right-hand rule about y). <kbd>Space</kbd> plays the interpolation demo.</span>
+        </p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Examples and readouts</h2>
+        <div class="controls-grid rot-controls-grid">
+          <div class="controls-col">
+            <div class="presets" data-view-only="chain">
+              <h3>Order matters</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="xy"><span>R<sub>x</sub> 90° then R<sub>y</sub> 90°</span></button></li>
+                <li><button type="button" class="btn" data-preset="yx"><span>R<sub>y</sub> 90° then R<sub>x</sub> 90°</span></button></li>
+                <li><button type="button" class="btn" data-preset="xyz">X, Y, Z: 90° each</button></li>
+              </ul>
+            </div>
+            <div class="presets" data-view-only="chain">
+              <h3>Homogeneous transforms</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="tr">Translate then rotate</button></li>
+                <li><button type="button" class="btn" data-preset="rt">Rotate then translate</button></li>
+                <li><button type="button" class="btn" data-preset="arm">Two-link arm</button></li>
+              </ul>
+            </div>
+            <div class="presets" data-view-only="gimbal">
+              <h3>Pitch</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="level">Level (all 0°)</button></li>
+                <li><button type="button" class="btn" data-preset="p45">Pitch 45°</button></li>
+                <li><button type="button" class="btn" data-preset="p80">Pitch 80°</button></li>
+                <li><button type="button" class="btn" data-preset="lock">Gimbal lock (pitch 90°)</button></li>
+                <li><button type="button" class="btn" data-preset="lockdown">Pitch &minus;90°</button></li>
+              </ul>
+            </div>
+            <div class="presets" data-view-only="gimbal">
+              <h3>Interpolate through the singularity</h3>
+              <p class="control-note muted">Play goes from <span data-calc="interpA">–</span> to <span data-calc="interpB">–</span> twice at once: the rings follow the Euler angles in a straight line, the ghost follows the quaternion slerp.</p>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off" data-view-only="chain">
+              <div class="readout readout--wide">
+                <dt>Final orientation as ZYX Euler angles</dt>
+                <dd><b data-out="euler">–</b></dd>
+                <dd class="sub" data-out="eulerSub">yaw &psi;, pitch &theta;, roll &phi;</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>As a unit quaternion (w, x, y, z)</dt>
+                <dd><b data-out="quat">–</b></dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>As one turn (axis&ndash;angle)</dt>
+                <dd><b data-out="aa">–</b></dd>
+              </div>
+              <div class="readout">
+                <dt>Origin of the final frame</dt>
+                <dd><b data-out="pos">–</b></dd>
+                <dd class="sub">metres, in the world frame</dd>
+              </div>
+              <div class="readout">
+                <dt>Reversed order ends</dt>
+                <dd><b data-out="revAngle">–</b></dd>
+                <dd class="sub" data-out="revSub">from this result</dd>
+              </div>
+            </dl>
+            <dl class="readouts" aria-live="off" data-view-only="gimbal">
+              <div class="readout">
+                <dt>Yaw axis to roll axis</dt>
+                <dd><b data-out="axisAngle">–</b></dd>
+                <dd class="sub">90° &minus; |&theta;|</dd>
+              </div>
+              <div class="readout">
+                <dt>Independent turning directions</dt>
+                <dd><b data-out="dof">–</b></dd>
+                <dd class="sub" data-out="dofSub">det = cos &theta;</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Unit quaternion (w, x, y, z)</dt>
+                <dd><b data-out="gQuat">–</b></dd>
+                <dd class="sub">smooth everywhere, including at &theta; = &plusmn;90°</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Euler angles read back from the matrix</dt>
+                <dd><b data-out="gBack">–</b></dd>
+                <dd class="sub" data-out="gBackSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Interpolation demo: total turning</dt>
+                <dd><b data-out="interp">–</b></dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col" data-view-only="chain">
+            <h3 class="readouts-title" id="typed-heading">Type a matrix</h3>
+            <p class="control-note muted rot-typed-intro">Enter any 3&times;3 matrix and the page checks whether it is a rotation. Columns are where x, y and z end up.</p>
+            <div class="rot-typed" role="group" aria-labelledby="typed-heading">
+              <div class="rot-typed-head" aria-hidden="true"><span class="ax-x">x&prime;</span><span class="ax-y">y&prime;</span><span class="ax-z">z&prime;</span></div>
+              <div class="rot-typed-grid" id="typed-grid"></div>
+            </div>
+            <div class="rot-typed-actions">
+              <button type="button" class="btn btn-small" id="typed-load">Copy the chain's R</button>
+              <button type="button" class="btn btn-small" data-typed="reflect">Example: mirror</button>
+              <button type="button" class="btn btn-small" data-typed="stretch">Example: stretched</button>
+              <button type="button" class="btn btn-small" data-typed="skew">Example: skewed</button>
+            </div>
+            <div class="rot-typed-result" id="typed-result" aria-live="polite"></div>
+            <div class="control-row">
+              <label class="check"><input type="checkbox" id="typed-show" checked> Show it in the 3D view when valid</label>
+              <button type="button" class="btn btn-small" id="typed-chain"><span>Build it as R<sub>z</sub>&middot;R<sub>y</sub>&middot;R<sub>x</sub></span></button>
+            </div>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Right-handed frames, rotations that turn column vectors (v&prime; = R v), angles in degrees. Your current values plugged in.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">R<sub>x</sub>(&theta;) = <span class="mini-mat"><span>1</span><span>0</span><span>0</span><span>0</span><span>cos &theta;</span><span>&minus;sin &theta;</span><span>0</span><span>sin &theta;</span><span>cos &theta;</span></span></span>
+          <span class="eq-note" data-eq="rx">–</span>
+        </li>
+        <li>
+          <span class="eq">R<sub>y</sub>(&theta;) = <span class="mini-mat"><span>cos &theta;</span><span>0</span><span>sin &theta;</span><span>0</span><span>1</span><span>0</span><span>&minus;sin &theta;</span><span>0</span><span>cos &theta;</span></span></span>
+          <span class="eq-note" data-eq="ry">–</span>
+        </li>
+        <li>
+          <span class="eq">R<sub>z</sub>(&theta;) = <span class="mini-mat"><span>cos &theta;</span><span>&minus;sin &theta;</span><span>0</span><span>sin &theta;</span><span>cos &theta;</span><span>0</span><span>0</span><span>0</span><span>1</span></span></span>
+          <span class="eq-note" data-eq="rz">–</span>
+        </li>
+        <li>
+          <span class="eq">moving axes: R = R<sub>1</sub>R<sub>2</sub>&hellip;R<sub>n</sub><br>fixed axes: R = R<sub>n</sub>&hellip;R<sub>2</sub>R<sub>1</sub></span>
+          <span class="eq-note" data-eq="compose">–</span>
+        </li>
+        <li>
+          <span class="eq">R<sub>1</sub>R<sub>2</sub>&hellip;R<sub>n</sub> (moving) = the reversed order about the fixed axes</span>
+          <span class="eq-note" data-eq="reverse">–</span>
+        </li>
+        <li>
+          <span class="eq">T = <span class="mini-mat mini-mat--2"><span>R</span><span>p</span><span>0</span><span>1</span></span>, &nbsp;T<sup>&minus;1</sup> = <span class="mini-mat mini-mat--2"><span>R<sup>T</sup></span><span>&minus;R<sup>T</sup>p</span><span>0</span><span>1</span></span></span>
+          <span class="eq-note" data-eq="homog">–</span>
+        </li>
+        <li>
+          <span class="eq">R<sup>T</sup>R = I, &nbsp;det R = +1</span>
+          <span class="eq-note" data-eq="checks">–</span>
+        </li>
+        <li>
+          <span class="eq">&theta; = atan2(&minus;r<sub>31</sub>, &radic;(r<sub>11</sub><sup>2</sup> + r<sub>21</sub><sup>2</sup>)), &psi; = atan2(r<sub>21</sub>, r<sub>11</sub>), &phi; = atan2(r<sub>32</sub>, r<sub>33</sub>)</span>
+          <span class="eq-note" data-eq="euler">–</span>
+        </li>
+        <li>
+          <span class="eq">w = &frac12;&radic;(1 + r<sub>11</sub> + r<sub>22</sub> + r<sub>33</sub>), &nbsp;(x, y, z) = (r<sub>32</sub> &minus; r<sub>23</sub>, r<sub>13</sub> &minus; r<sub>31</sub>, r<sub>21</sub> &minus; r<sub>12</sub>) / 4w</span>
+          <span class="eq-note" data-eq="quat">–</span>
+        </li>
+        <li>
+          <span class="eq">cos &alpha; = (r<sub>11</sub> + r<sub>22</sub> + r<sub>33</sub> &minus; 1) / 2, &nbsp;q = (cos &alpha;/2, n sin &alpha;/2)</span>
+          <span class="eq-note" data-eq="aa">–</span>
+        </li>
+        <li>
+          <span class="eq">det[roll axis, pitch axis, yaw axis] = cos &theta;</span>
+          <span class="eq-note" data-eq="gimbal">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Rotations, frames and gimbal lock, explained</h2>
+
+        <h3>A rotation matrix is three arrows</h3>
+        <p>A coordinate frame is an origin and three perpendicular unit arrows, x, y and z. A 3&times;3 rotation matrix <var>R</var> stores the turned frame's arrows as its columns, written in the fixed frame: the first column is where x ends up, the second where y ends up, the third where z ends up. That is why the matrix on the 3D view has its columns coloured like the axes. Multiplying a vector by <var>R</var> turns it: <span class="eq-inline">R<sub>z</sub>(90°)</span> sends x = (1, 0, 0) to (0, 1, 0).</p>
+        <p>Because the columns are perpendicular unit arrows, <span class="eq-inline">R<sup>T</sup>R = I</span>: turning keeps every length and angle. And <span class="eq-inline">det R = +1</span>: a right-handed frame stays right-handed. A matrix that passes the first test but has a determinant of &minus;1 is a mirror image, not a turn. The page checks both for every matrix it shows, and for any matrix you type in.</p>
+
+        <h3>Why order matters</h3>
+        <p>Turn a book 90° about one edge, then 90° about another, and it ends up in a different position from doing the same two turns the other way round. In matrices, <span class="eq-inline">R<sub>1</sub>R<sub>2</sub> &ne; R<sub>2</sub>R<sub>1</sub></span> in general: rotations in 3D do not commute. Small turns almost do, which is why the effect surprises people. It only becomes obvious with big angles, so the examples use 90°.</p>
+
+        <h3>Moving axes or fixed axes?</h3>
+        <p>&ldquo;Rotate about x, then about y&rdquo; is ambiguous until you say which y. Turning about the moving axes (intrinsic) means each turn is about the object's own, already-turned axes, like an aircraft's yaw, pitch and roll. The matrices then multiply on the right: <span class="eq-inline">R = R<sub>1</sub>R<sub>2</sub>&hellip;R<sub>n</sub></span>. Turning about the fixed axes (extrinsic) means each turn is about the world's axes, which never move. The matrices multiply on the left: <span class="eq-inline">R = R<sub>n</sub>&hellip;R<sub>2</sub>R<sub>1</sub></span>.</p>
+        <p>The two are linked: turning about the moving axes in one order gives exactly the same result as turning about the fixed axes in the reverse order. So the &ldquo;Compare reversed order&rdquo; ghost is also where the object would end up under the other convention. Switch the toggle and the solid object jumps to where the ghost was.</p>
+
+        <h3>Homogeneous transforms in robotics</h3>
+        <p>A robot needs position as well as orientation. A 4&times;4 homogeneous transform <span class="eq-inline">T = [R p; 0 1]</span> holds both: <var>R</var> turns and <var>p</var> moves. Chaining joints and links is then just matrix multiplication, read along the arm: in the two-link arm example, <span class="eq-inline">T = R<sub>z</sub>(base) R<sub>y</sub>(shoulder) T(upper arm) R<sub>y</sub>(elbow) T(forearm)</span>, each step in the frame left by the one before. The inverse needs no general matrix inversion: <span class="eq-inline">T<sup>&minus;1</sup> = [R<sup>T</sup> &minus;R<sup>T</sup>p; 0 1]</span>.</p>
+        <p>Order matters here too. Translate then rotate (about the moving axes) moves the object first and then spins it on the spot. Rotate then translate turns it first and then sends it along its new x axis, so it ends up somewhere else.</p>
+
+        <h3>Gimbal lock</h3>
+        <p>Three angles are enough to describe any orientation. The usual aerospace set is yaw <var>&psi;</var> about z, then pitch <var>&theta;</var> about the new y, then roll <var>&phi;</var> about the newest x. A gimbal is the physical version: three nested rings, each turning about one of those axes. When the pitch reaches &plusmn;90°, the roll axis swings round until it lines up with the yaw axis. Yaw and roll then turn the object about the same line, so the three angles only give two independent directions to turn in. A degree of freedom has gone: no small change of <var>&psi;</var>, <var>&theta;</var> or <var>&phi;</var> can turn the object about the missing direction.</p>
+        <p>The orientation itself is perfectly ordinary. It is the description that breaks: at <span class="eq-inline">&theta; = 90°</span> only <span class="eq-inline">&psi; &minus; &phi;</span> is defined, so the angles cannot be read back uniquely from the matrix.</p>
+        <p>A unit quaternion <span class="eq-inline">q = (w, x, y, z) = (cos &alpha;/2, n sin &alpha;/2)</span> describes the same orientation as one turn <var>&alpha;</var> about an axis <var>n</var>. It uses four numbers tied together by <span class="eq-inline">w<sup>2</sup> + x<sup>2</sup> + y<sup>2</sup> + z<sup>2</sup> = 1</span>, and the extra number removes the singularity: the quaternion changes smoothly through <span class="eq-inline">&theta; = 90°</span>, and slerp (spherical linear interpolation) moves between two orientations along the shortest path at a steady rate. In the interpolation demo, straight-line Euler interpolation from <span data-calc="interpA">–</span> to <span data-calc="interpB">–</span> swings the object through <span data-calc="interpEuler">–</span> in total, while slerp turns it just <span data-calc="interpSlerp">–</span>.</p>
+
+        <h3>Worked example</h3>
+        <p>Start with the frame lined up with the world. Turn 90° about x: y goes to where z was, and z to &minus;y. Now turn 90° about the new y axis, which points along the world z axis: that carries x round to the world y axis. So <span class="eq-inline">R<sub>x</sub>(90°)R<sub>y</sub>(90°)</span> sends x to y.</p>
+        <p>The other way round, <span class="eq-inline">R<sub>y</sub>(90°)</span> first tips x down to &minus;z. The second turn is about that new x axis, so it cannot move it: x stays pointing down. <span class="eq-inline">R<sub>y</sub>(90°)R<sub>x</sub>(90°)</span> sends x to &minus;z. The two results are a single turn of <span data-calc="xyGap">–</span> apart. Load the two &ldquo;order matters&rdquo; examples and press Play to watch both happen.</p>
+
+        <h3>Conventions used here</h3>
+        <p>Right-handed frames with z up; rotations that turn vectors (<span class="eq-inline">v&prime; = R v</span>, column vectors), with <var>R<sub>x</sub></var>, <var>R<sub>y</sub></var>, <var>R<sub>z</sub></var> as in Lynch and Park's <em>Modern Robotics</em>; quaternions written (w, x, y, z) with the scalar first and multiplied with Hamilton's rule. Diebel's report uses the opposite, passive convention (the matrix that converts world coordinates into body coordinates), so his matrices are the transposes of the ones here. The formulas on this page were checked against both. With z up, a positive pitch tips the nose down.</p>
+
+        <h3>What is approximate</h3>
+        <p>Nothing in the maths: the matrices are exact apart from floating-point rounding, which shows up in the checks as errors of about 10<sup>&minus;16</sup> or less. The 3D picture is a perspective drawing, not to scale, and the object is just a shape that makes orientation easy to see. A typed matrix counts as a rotation when its columns have unit length and are perpendicular to within 0.001 (so values typed to three decimals pass) and its determinant is positive.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Robotics and 3D maths books. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: robotics textbook</li>
+            <li class="affiliate-placeholder">Affiliate link slot: 3D maths for graphics</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>J. Diebel (2006), <a href="https://www.astro.rug.nl/software/kapteyn-beta/_downloads/attitude.pdf">&ldquo;Representing Attitude: Euler Angles, Unit Quaternions, and Rotation Vectors&rdquo;</a>, Stanford University (copy hosted with the Kapteyn package documentation, University of Groningen): properties of rotation matrices, the (1, 2, 3) Euler sequence and its singularity at pitch &plusmn;90° (gimbal lock), Euler angles to quaternion, quaternion to matrix and the axis&ndash;angle quaternion. Diebel's matrices are passive (world to body), the transposes of the ones used here.</li>
+        <li>K. M. Lynch and F. C. Park (2017), <em>Modern Robotics: Mechanics, Planning, and Control</em>, Cambridge University Press, <a href="http://hades.mech.northwestern.edu/images/7/7f/MR.pdf">preprint PDF</a> (<a href="http://modernrobotics.org">modernrobotics.org</a>): R<sub>x</sub>, R<sub>y</sub>, R<sub>z</sub> and the rule that pre-multiplying turns about fixed axes and post-multiplying about body axes (&sect;3.2.1), the definition of a rotation matrix (R<sup>T</sup>R = I, det R = 1), axis&ndash;angle from a matrix (&sect;3.2.3.3), homogeneous transforms and their inverse (Definition 3.13, Proposition 3.15), ZYX Euler angles and their extraction (Appendix B.1) and unit quaternions (Appendix B.3).</li>
+        <li>Both retrieved 7 October 2026. Every formula is also checked numerically by the page's <a href="tests/rotation.test.html">unit tests</a>.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

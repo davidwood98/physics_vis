@@ -382,6 +382,16 @@ input[type="range"] {
 .result:empty { display: none; }
 .result--warn { background: var(--warn-bg); color: var(--warn-fg); }
 
+/* Caveat callout: "a teaching tool, not a design check", "not a substitute for the supplier's data" */
+.notice {
+  margin: 12px 0 0; padding: 10px 14px; border-radius: var(--radius-sm);
+  border-left: 4px solid var(--warn-fg); background: var(--warn-bg); color: var(--warn-fg);
+  font-size: 0.9rem;
+}
+.notice p { margin: 0; }
+.notice p + p { margin-top: 4px; }
+.notice a { color: inherit; }
+
 /* Preset buttons */
 .presets { margin-top: 14px; }
 .presets h3 { margin: 0 0 6px; font-size: 0.95rem; }
@@ -649,6 +659,532 @@ input[type="range"] {
 
 .data-credits { margin-top: 32px; }
 .data-credits ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); }
+
+/* ---------- Earth to orbit (earth-orbit.html) ---------- */
+
+/* ---------- Canvas colours (read by js/earth-orbit.js through createSim colorVars) ---------- */
+
+:root {
+  --orbit-earth: #2f6fd6;          /* the 2 cm Earth */
+  --orbit-earth-edge: #1d4ea3;
+  --orbit-geo: #b45309;            /* geostationary ring + satellite (same hue as --canvas-ref) */
+  --orbit-gps: #6d4fc2;            /* GPS ring + satellite */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --orbit-earth: #3d8bfd;
+    --orbit-earth-edge: #8dbbff;
+    --orbit-geo: #fbbf24;
+    --orbit-gps: #b8a4ff;
+  }
+}
+
+/* ---------- Compact objects (compact-objects.html) ---------- */
+
+/* ---------- Canvas colours (read by js/compact-objects.js through createSim colorVars) ---------- */
+
+:root {
+  --co-star: #f2a516;        /* the Sun */
+  --co-dwarf: #9cc3ff;       /* white dwarf (drawn bluish white, with an outline) */
+  --co-neutron: #7c6cf0;     /* neutron star */
+  --co-hole: #05070a;        /* horizon: black in both themes */
+  --co-glow: #e8730c;        /* thin ring round a horizon so it reads on dark backgrounds */
+  --co-coin: #a9b0ba;        /* 5p coin (nickel-plated steel) */
+  --co-earth: #2f6fd6;       /* the space page's 2 cm Earth */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --co-star: #ffc94d;
+    --co-dwarf: #dce9ff;
+    --co-neutron: #a99bff;
+    --co-hole: #000000;
+    --co-glow: #ff9b3d;
+    --co-coin: #8e96a1;
+    --co-earth: #3d8bfd;
+  }
+}
+
+/* ---------- Controls ---------- */
+
+/* The mass input holds numbers like 5.97e+24: give it room. */
+.page-compact-objects #m-num { width: 9.5em; }
+
+/* ---------- Tolerance and fit visualiser (tolerance.html) ---------- */
+
+/* ---------- Theme: colours the canvas reads (light, then dark) ---------- */
+
+.page-tolerance {
+  /* "One screen pixel" drawn magnified */
+  --tol-pixel: rgba(90, 99, 113, 0.10);
+  /* Materials in the section drawings */
+  --tol-block: #d5dbe3;        /* the part with the hole */
+  --tol-block-line: #8b96a5;
+  --tol-shaft: #a9c1ea;        /* the shaft */
+  --tol-shaft-line: #2f5fb3;
+}
+@media (prefers-color-scheme: dark) {
+  .page-tolerance {
+    --tol-pixel: rgba(155, 165, 179, 0.12);
+    --tol-block: #343c48;
+    --tol-block-line: #6c7787;
+    --tol-shaft: #2b4672;
+    --tol-shaft-line: #8fb5ff;
+  }
+}
+
+/* ---------- Fit parts (hole / shaft letter / shaft grade) ---------- */
+
+.tol-parts { margin: 0; padding: 0 0 10px; border: 0; border-bottom: 1px solid var(--border); min-inline-size: 0; }
+.tol-parts legend { padding: 0; margin-bottom: 6px; }
+.tol-parts-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px; }
+.tol-part { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+.tol-part select { min-width: 5.5em; font-variant-numeric: tabular-nums; }
+.tol-slash { align-self: center; padding-top: 18px; font-size: 1.3rem; color: var(--muted); }
+
+/* ---------- Under the canvas ---------- */
+
+.tol-fit-use { flex: 1 1 320px; margin: 0; }
+.page-tolerance #fit-select { max-width: min(100%, 360px); }
+
+/* Readouts: room for the long limit strings */
+.tol-readouts-col .readout dd b { white-space: nowrap; }
+
+/* ---------- Motion profile and cycle time (motion-profile.html) ---------- */
+
+/* ---------- Canvas: lanes plus three or four stacked graphs need height ---------- */
+
+.page-motion-profile .canvas-wrap {
+  height: clamp(520px, 78vh, 940px);
+  height: clamp(520px, 78svh, 940px);
+}
+
+/* ---------- Two-profile readout table (Trapezoid | S-curve) ---------- */
+
+.compare-table {
+  width: 100%;
+  border-collapse: separate; border-spacing: 0 4px;
+  font-size: 0.875rem; font-variant-numeric: tabular-nums;
+}
+.compare-table th, .compare-table td { padding: 5px 10px; text-align: right; vertical-align: baseline; }
+.compare-table thead th { font-size: 0.8rem; font-weight: 650; color: var(--muted); white-space: nowrap; }
+.compare-table tbody th { text-align: left; font-weight: 500; color: var(--muted); }
+.compare-table tbody th .sub { font-size: 0.75rem; }
+.compare-table tbody tr > * { background: var(--surface-2); }
+.compare-table tbody tr > :first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.compare-table tbody tr > :last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.compare-table td { color: var(--text); white-space: nowrap; }
+.compare-table tr.is-key td { font-size: 1.05rem; font-weight: 650; }
+.compare-table tr.is-key th { color: var(--text); font-weight: 600; }
+
+/* Line keys matching the canvas: trapezoid solid accent, S-curve dashed reference colour */
+.page-motion-profile .key { display: inline-block; width: 20px; margin-right: 6px; vertical-align: middle; border-top-width: 3px; }
+.page-motion-profile .key--trap { border-top-style: solid; border-top-color: var(--accent); }
+.page-motion-profile .key--s { border-top-style: dashed; border-top-color: var(--canvas-ref); }
+
+/* ---------- Beam deflection (beam.html) ---------- */
+
+/* ---------- Canvas ---------- */
+
+/* The drawing stacks badges, loads, the beam, a ruler and the moment diagram,
+   so it gets a little more height than the default canvas. Full screen still
+   wins (.sim-card:fullscreen .canvas-wrap is more specific). */
+.page-beam .beam-canvas-wrap { height: clamp(440px, 66vh, 780px); }
+
+/* ---------- Controls ---------- */
+
+.page-beam .sim-controls .select-label select { max-width: min(100%, 26em); }
+.beam-material { margin: 6px 0 0; line-height: 1.45; }
+.beam-material b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.page-beam .readout dd .sub { font-size: 0.8rem; }
+
+/* ---------- Suction cup sizing (suction-cup.html) ---------- */
+
+/* ---------- Canvas: side view above the force bars ---------- */
+
+.page-suction-cup .canvas-wrap {
+  height: clamp(500px, 72vh, 900px);
+  height: clamp(500px, 72svh, 900px);
+}
+
+/* ---------- Controls ---------- */
+
+/* Standard-size buttons under the diameter slider */
+.size-list { margin-top: 6px; }
+.size-list .btn { min-height: 36px; padding: 0 10px; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+/* A select row inside a .control block (no extra rule) */
+.control-row--flush { padding-block: 6px 0; border-bottom: 0; }
+
+/* Notes that sit under a segmented control in a .control-row take the full width */
+.control-row .case-note { flex-basis: 100%; margin-top: 0; }
+.conv-note { margin: 6px 0 0; }
+
+/* Product size row below the three columns */
+.product-row { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border); }
+.product-title { margin: 0 0 6px; font-size: 0.95rem; }
+.product-row .presets { margin-top: 4px; }
+
+/* Verdict colours in the readouts */
+.verdict--ok { color: var(--ok-fg); font-weight: 650; }
+.verdict--warn { color: var(--warn-fg); font-weight: 650; }
+
+/* ---------- Atomic scale ladder (atomic-ladder.html) ---------- */
+
+:root {
+  --ladder-sub-r: 220, 38, 38;        /* pixel sub-pixel stripes */
+  --ladder-sub-g: 22, 163, 74;
+  --ladder-sub-b: 37, 99, 235;
+  --ladder-gap: 60, 66, 76;           /* the dark gaps between sub-pixels */
+  --ladder-hair: 120, 72, 36;
+  --ladder-rbc: 200, 40, 50;
+  --ladder-ecoli: 70, 140, 60;
+  --ladder-virus: 130, 70, 190;
+  --ladder-dna: 14, 116, 144;
+  --ladder-cloud: 37, 99, 235;
+  --ladder-nucleus: 194, 65, 12;
+  --ladder-proton: 219, 39, 119;
+  --ladder-hud-bg: rgba(255, 255, 255, 0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ladder-sub-r: 248, 113, 113;
+    --ladder-sub-g: 74, 222, 128;
+    --ladder-sub-b: 96, 165, 250;
+    --ladder-gap: 8, 10, 14;
+    --ladder-hair: 196, 140, 90;
+    --ladder-rbc: 248, 96, 104;
+    --ladder-ecoli: 132, 204, 112;
+    --ladder-virus: 192, 150, 250;
+    --ladder-dna: 56, 189, 220;
+    --ladder-cloud: 110, 168, 255;
+    --ladder-nucleus: 251, 146, 60;
+    --ladder-proton: 244, 114, 182;
+    --ladder-hud-bg: rgba(22, 26, 32, 0.92);
+  }
+}
+
+/* ---------- Canvas overlays ---------- */
+
+.ladder-wrap { touch-action: none; } /* wheel and pinch zoom along the rail */
+.ladder-wrap canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+.ladder-hud {
+  position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+  max-width: calc(100% - 260px);
+  padding: 5px 12px; border-radius: 999px;
+  background: var(--ladder-hud-bg); border: 1px solid var(--border); color: var(--text);
+  font-size: 0.8rem; font-variant-numeric: tabular-nums; text-align: center;
+  pointer-events: none;
+}
+
+.ladder-tip {
+  position: absolute; z-index: 2; max-width: min(380px, calc(100% - 16px));
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--ladder-hud-bg); border: 1px solid var(--border-strong); color: var(--text);
+  font-size: 0.82rem; line-height: 1.35; pointer-events: none;
+}
+.ladder-tip strong { font-size: 0.88rem; }
+.ladder-tip span { color: var(--muted); }
+
+/* Fact line under the stops (a .result, kept visible so the layout does not jump). */
+.ladder-fact { min-height: 2.6em; }
+.ladder-fact:empty { display: block; }
+.ladder-fact .muted { color: var(--muted); }
+
+/* ---------- Atom = 1 cm, proton = 1 cm (atom.html) ---------- */
+
+:root {
+  --atom-cloud-rgb: 37, 99, 235;      /* electron cloud (r, g, b for alpha) */
+  --atom-nucleus: #c2410c;            /* nuclei */
+  --atom-proton-rgb: 219, 39, 119;    /* the proton's fuzzy region */
+  --atom-quark-r: #dc2626;            /* colour-charge hints for quark markers */
+  --atom-quark-g: #15803d;
+  --atom-quark-b: #1d4ed8;
+  --atom-quark-r-rgb: 220, 38, 38;    /* the same three as r, g, b for soft hints */
+  --atom-quark-g-rgb: 21, 128, 61;
+  --atom-quark-b-rgb: 29, 78, 216;
+  --atom-gluon: #a16207;              /* gluon squiggles */
+  --atom-field-bar: #f2c48d;          /* mass bar: field energy */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --atom-cloud-rgb: 110, 168, 255;
+    --atom-nucleus: #fb923c;
+    --atom-proton-rgb: 244, 114, 182;
+    --atom-quark-r: #f87171;
+    --atom-quark-g: #4ade80;
+    --atom-quark-b: #60a5fa;
+    --atom-quark-r-rgb: 248, 113, 113;
+    --atom-quark-g-rgb: 74, 222, 128;
+    --atom-quark-b-rgb: 96, 165, 250;
+    --atom-gluon: #facc15;
+    --atom-field-bar: #6b4a1f;
+  }
+}
+
+/* ---------- Controls ---------- */
+
+.element-note { margin: 0 0 4px; }
+.page-atom #element-select { max-width: 16em; }
+
+/* ---------- Proton mass budget bar ---------- */
+
+.mass-bar {
+  display: flex; height: 24px; margin-top: 10px; overflow: hidden;
+  border-radius: 6px; border: 1px solid var(--border);
+}
+.mass-bar-quarks { flex: none; min-width: 3px; background: var(--atom-quark-r); }
+.mass-bar-field { flex: 1 1 auto; background: var(--atom-field-bar); }
+.mass-bar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.page-atom .key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; }
+.page-atom .key--quarks { background: var(--atom-quark-r); }
+.page-atom .key--field { background: var(--atom-field-bar); border: 1px solid var(--border); }
+
+/* ---------- Rutherford scattering (rutherford.html) ---------- */
+
+/* ---------- Canvas colours (read by js/rutherford.js through createSim colorVars) ---------- */
+
+:root {
+  --ruth-atom-rgb: 100, 116, 139;   /* electron clouds of the foil atoms */
+  --ruth-hot: #b45309;              /* back-scattered alphas (same as --canvas-ref) */
+  --ruth-hot-rgb: 180, 83, 9;
+  --ruth-nucleus: #b91c1c;          /* the nucleus in the magnified inset */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ruth-atom-rgb: 148, 163, 184;
+    --ruth-hot: #fbbf24;
+    --ruth-hot-rgb: 251, 191, 36;
+    --ruth-nucleus: #f87171;
+  }
+}
+
+/* ---------- Sim card ---------- */
+
+/* The caveat stays visible under the canvas; full screen keeps the height for the drawing. */
+.page-rutherford .sim-card .notice { margin-top: 10px; }
+.page-rutherford .sim-card:fullscreen .notice { display: none; }
+.page-rutherford .sim-card:fullscreen .result { margin: 0; }
+
+/* ---------- Controls card ---------- */
+
+/* Readouts run across the full card width under the inputs, so the card stays short
+   (this page is a tall view: the controls sit above the canvas). */
+.ruth-readouts { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.ruth-readouts .readout--wide { grid-column: span 2; }
+@media (max-width: 539px) {
+  .ruth-readouts .readout--wide { grid-column: 1 / -1; }
+}
+
+/* ---------- Wavelength ruler (wavelength.html) ---------- */
+
+/* Number boxes with a unit picker in place of the fixed unit label */
+.num-field .unit-select {
+  min-height: 44px; padding: 0 6px;
+  font-size: 0.9rem; background: var(--surface-2);
+}
+.page-wavelength #f-num, .page-wavelength #lam-num { width: 8em; }
+
+/* First modes between the walls (standing waves readout) */
+.mode-list { margin-top: 6px; }
+.mode-list li { padding: 4px 10px; }
+.mode-list li b { font-size: inherit; }
+.mode-list li.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
+.mode-list li.is-current b { color: var(--accent); }
+
+/* Speed note next to the wave picker under the canvas */
+.page-wavelength #speed-note { font-variant-numeric: tabular-nums; }
+
+/* ---------- Rotation and transform composer (rotation.html) ---------- */
+
+:root {
+  --rot-x: #cf2f3b;      /* x axes, red (column 1 of R) */
+  --rot-y: #1d8a3a;      /* y axes, green (column 2) */
+  --rot-z: #1f5fd8;      /* z axes, blue (column 3) */
+  --rot-body: #9aa3b1;   /* the solid object */
+  --rot-ghost: #b22ea1;  /* reversed-order ghost, slerp ghost */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rot-x: #ff6f7a;
+    --rot-y: #5fd17f;
+    --rot-z: #6ea6ff;
+    --rot-body: #8e98a7;
+    --rot-ghost: #e886f2;
+  }
+}
+
+.ax-x { color: var(--rot-x); }
+.ax-y { color: var(--rot-y); }
+.ax-z { color: var(--rot-z); }
+
+/* ---------- Canvas: tall, with the matrix panel on it ---------- */
+
+/* Tall, but leaves room under it for the chain editor on a 1080p screen */
+.rot-wrap {
+  height: max(440px, calc(100vh - 350px));
+  height: max(440px, calc(100svh - 350px));
+  touch-action: none; /* drag orbits, pinch zooms */
+}
+.rot-wrap canvas { cursor: grab; }
+.rot-wrap canvas:active { cursor: grabbing; }
+.rot-wrap canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+.rot-hud {
+  position: absolute; left: 10px; top: 10px; z-index: 2;
+  width: min(330px, calc(100% - 20px)); max-height: calc(100% - 20px); overflow: auto;
+  padding: 10px 12px; border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  font-size: 0.85rem; line-height: 1.35; font-variant-numeric: tabular-nums;
+}
+.rot-hud p { margin: 0; }
+.rot-hud-eq { font-family: var(--font-math); font-size: 1.02rem; }
+.rot-hud-note { margin-top: 2px !important; color: var(--muted); font-size: 0.78rem; }
+.rot-hud-sub { margin: 8px 0 2px !important; color: var(--muted); font-size: 0.78rem; }
+
+/* Live matrix: coloured column labels over a bracketed grid */
+.rot-mat { display: inline-block; margin: 8px 0 2px; }
+.rot-mat-head, .rot-mat-grid {
+  display: grid; grid-template-columns: repeat(var(--n, 3), 4.1em); column-gap: 0.45em; text-align: right;
+}
+.rot-mat-head { padding: 0 10px; font: italic 650 0.95rem var(--font-math); }
+.rot-mat-grid { position: relative; padding: 3px 10px; font-size: 0.95rem; }
+.rot-mat-grid::before, .rot-mat-grid::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 6px; border: 1.5px solid var(--text);
+}
+.rot-mat-grid::before { left: 0; border-right: 0; border-radius: 3px 0 0 3px; }
+.rot-mat-grid::after { right: 0; border-left: 0; border-radius: 0 3px 3px 0; }
+.rot-mat .is-p { box-shadow: -0.25em 0 0 -0.2em var(--border-strong); }
+.rot-mat .is-dim { color: var(--muted); }
+
+.rot-checks { display: grid; gap: 3px; margin: 6px 0 0; padding: 0; list-style: none; }
+.rot-check { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+.rot-check:empty { display: none; }
+.rot-check::before {
+  content: "✓"; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  font-size: 0.7rem; font-weight: 800; background: var(--ok-bg); color: var(--ok-fg);
+}
+.rot-check.is-warn::before { content: "!"; background: var(--warn-bg); color: var(--warn-fg); }
+.rot-check.is-warn { color: var(--warn-fg); }
+
+/* Quaternion bars (gimbal view): zero in the middle, ±1 at the ends */
+.rot-quat { display: grid; gap: 3px; }
+.rot-qrow { display: grid; grid-template-columns: 1.1em 1fr 3.6em; align-items: center; gap: 6px; }
+.rot-qrow > span:first-child { font: italic 650 0.9rem var(--font-math); }
+.rot-qrow b { font-weight: 600; text-align: right; }
+.rot-qbar { position: relative; height: 8px; border-radius: 4px; background: var(--surface-2); }
+.rot-qbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border-strong); }
+.rot-qbar i { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--accent); }
+
+/* ---------- Chain editor: one card per step, applied left to right ---------- */
+
+.rot-chain { margin-top: 12px; }
+.rot-chain:has(.rot-steps:empty) { display: none; }
+.rot-steps { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 22px; margin: 0; padding: 0; list-style: none; }
+.rot-steps:empty { display: none; }
+.rot-step {
+  position: relative; width: 210px; padding: 4px 7px 6px;
+  border: 1px solid var(--border); border-left: 4px solid var(--border-strong);
+  border-radius: var(--radius-sm); background: var(--surface-2);
+}
+.rot-step[data-type="rx"] { border-left-color: var(--rot-x); }
+.rot-step[data-type="ry"] { border-left-color: var(--rot-y); }
+.rot-step[data-type="rz"] { border-left-color: var(--rot-z); }
+/* "then" arrows between the steps */
+.rot-step + .rot-step::before {
+  content: "→"; position: absolute; left: -19px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 1rem; pointer-events: none;
+}
+.rot-step.is-dragging { z-index: 5; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28); cursor: grabbing; }
+.rot-step.is-dragging::before { visibility: hidden; }
+.rot-step.is-active { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.rot-step-head { display: flex; align-items: center; gap: 4px; }
+.rot-handle {
+  flex: none; width: 30px; min-height: 36px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted); cursor: grab; touch-action: none;
+}
+.rot-handle::before {
+  content: ""; display: block; width: 10px; height: 16px; margin: auto;
+  background-image: radial-gradient(circle, currentColor 1.4px, transparent 1.6px);
+  background-size: 5px 5px;
+}
+.rot-handle:hover { color: var(--text); background: var(--surface); }
+.rot-step-name { flex: 1; min-width: 0; font: 650 1rem var(--font-math); white-space: nowrap; }
+.rot-step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; margin-right: 4px; padding: 0 4px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border);
+  font: 700 0.75rem var(--font); vertical-align: 2px;
+}
+.rot-step-tools { display: flex; gap: 2px; }
+.rot-step-tools .btn { width: 33px; min-height: 36px; padding: 0; font-size: 1rem; font-weight: 600; }
+.rot-step-tools .btn:disabled { opacity: 0.35; cursor: default; }
+.rot-step-tools .btn:disabled:hover { border-color: var(--border-strong); }
+
+.rot-step-row { display: grid; grid-template-columns: 1.1em minmax(0, 1fr) auto; align-items: center; gap: 4px 6px; }
+.rot-step-row > label { font: italic 600 1rem var(--font-math); text-align: center; }
+.rot-step-row input[type="range"] { height: 34px; }
+.rot-step-row .num-field { gap: 2px; }
+.rot-step-row .num-field input { width: 4.6em; min-height: 34px; padding: 0 6px; }
+.rot-step-row .unit { min-width: 0.8em; }
+
+.rot-addbar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rot-addbar .btn { min-width: 52px; }
+
+/* ---------- Gimbal view controls ---------- */
+
+.rot-nudges { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rot-gimbal { margin-top: 8px; }
+.rot-gimbal-grid { display: grid; gap: 0 32px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rot-gimbal-grid .control { padding-top: 10px; }
+
+/* ---------- Controls card: type a matrix ---------- */
+
+.rot-typed-intro { margin: -4px 0 8px; }
+.rot-typed { display: inline-block; }
+.rot-typed-head, .rot-typed-grid { display: grid; grid-template-columns: repeat(3, 5.6em); gap: 6px; }
+.rot-typed-head { padding: 0 11px; text-align: center; font: italic 650 1rem var(--font-math); }
+.rot-typed-grid { position: relative; padding: 4px 11px; }
+.rot-typed-grid::before, .rot-typed-grid::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 7px; border: 1.5px solid var(--text);
+}
+.rot-typed-grid::before { left: 0; border-right: 0; border-radius: 4px 0 0 4px; }
+.rot-typed-grid::after { right: 0; border-left: 0; border-radius: 0 4px 4px 0; }
+.rot-typed-grid input { width: 100%; min-height: 40px; padding: 0 8px; text-align: right; font-variant-numeric: tabular-nums; background: var(--surface-2); }
+.rot-typed-grid input.is-bad { border-color: var(--warn-fg); }
+.rot-typed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rot-typed-result { margin-top: 10px; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.rot-typed-result .notice { margin: 0; }
+.rot-typed-result ul { margin: 4px 0 0; padding-left: 1.2em; }
+.rot-typed-ok { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.rot-typed-ok p { margin: 0; }
+.rot-typed-ok p + p { margin-top: 4px; }
+
+/* ---------- Maths card: small bracketed matrices ---------- */
+
+.mini-mat {
+  position: relative; display: inline-grid; grid-template-columns: repeat(3, auto); column-gap: 0.7em;
+  margin: 2px 3px; padding: 1px 8px; vertical-align: middle;
+  font-size: 0.82em; line-height: 1.3; text-align: center; white-space: nowrap;
+}
+.mini-mat--2 { grid-template-columns: repeat(2, auto); }
+.mini-mat::before, .mini-mat::after { content: ""; position: absolute; top: 0; bottom: 0; width: 5px; border: 1.2px solid currentColor; }
+.mini-mat::before { left: 0; border-right: 0; }
+.mini-mat::after { right: 0; border-left: 0; }
+
+/* Full screen: the chain editor stays under the canvas */
+.sim-card:fullscreen > .rot-chain,
+.sim-card:fullscreen > .rot-gimbal { margin: 0; }
 
 /* ---------- Simple pages (privacy) ---------- */
 

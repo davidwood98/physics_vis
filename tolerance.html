@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tolerance and Fit Visualiser: ISO 286 Fits at True Size | Real-Scale Physics</title>
+  <meta name="description" content="Pick a size and an ISO 286 hole-basis fit such as 25 H7/g6. See the shaft and hole at true size on your screen, where the gap is smaller than a pixel, then magnified with the tolerance zones, clearance or interference, a human hair and one screen pixel.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/tolerance.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Tolerance and Fit Visualiser: ISO 286 fits at true size">
+  <meta property="og:description" content="How tight is a tight tolerance? An H7 hole at 25 mm is 21 µm wide: less than a tenth of a pixel on a typical monitor.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/tolerance.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/tolerance.js"></script>
+</head>
+<body class="layout-tall page-tolerance">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Engineering</p>
+      <h1>Tolerance and fit visualiser</h1>
+      <p class="lead">Pick a nominal size and an ISO 286 fit such as 25&nbsp;H7/g6. The shaft and hole are drawn at true size, where the gap between them is a fraction of one pixel, and again magnified until the tolerance zones and the clearance or interference can be seen, next to a human hair and one screen pixel.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Drawing</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">ISO 286 hole-basis fits (the hole is always H). The section is drawn 1:1; the cut beside it is magnified.</p>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Shaft and hole at true size and magnified"></canvas>
+        </div>
+
+        <div class="sim-controls">
+          <label class="select-label">
+            <span>Fit</span>
+            <select id="fit-select" aria-describedby="fit-use">
+              <optgroup label="Preferred fits (hole basis)" id="fit-group-preferred"></optgroup>
+              <optgroup label="Also preferred in ISO 286-1:2010" id="fit-group-iso"></optgroup>
+              <option value="custom">Custom (set the parts under Controls)</option>
+            </select>
+          </label>
+          <label class="select-label">
+            <span>Magnification</span>
+            <select id="mag-select"></select>
+          </label>
+          <p class="tol-fit-use muted small" id="fit-use"></p>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">Nothing moves here: change the size or the fit and the drawing updates. The true-size drawing on the left really is 1:1 once your screen is calibrated; the gap is there, just far smaller than a pixel.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="size-range">Nominal size <var>D</var></label>
+                <span class="num-field">
+                  <input type="number" id="size-num" inputmode="decimal" aria-label="Nominal size D, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="size-range" aria-describedby="size-note">
+              <div class="range-hint" aria-hidden="true"><span>1 mm</span><span>log scale</span><span>500 mm</span></div>
+              <p class="control-note muted" id="size-note">ISO 286 groups sizes into ranges "over A up to and including B": 30&nbsp;mm uses the 18 to 30&nbsp;mm values, 30.1&nbsp;mm the 30 to 50&nbsp;mm values.</p>
+            </div>
+            <div class="presets">
+              <h3>Sizes</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="size6">6 mm</button></li>
+                <li><button type="button" class="btn" data-preset="size10">10 mm</button></li>
+                <li><button type="button" class="btn" data-preset="size25">25 mm</button></li>
+                <li><button type="button" class="btn" data-preset="size50">50 mm</button></li>
+                <li><button type="button" class="btn" data-preset="size100">100 mm</button></li>
+                <li><button type="button" class="btn" data-preset="size250">250 mm</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <fieldset class="tol-parts">
+              <legend class="control-label">Fit parts</legend>
+              <div class="tol-parts-row">
+                <label class="tol-part">
+                  <span>Hole</span>
+                  <select id="hole-grade" aria-label="Hole tolerance class: H with grade"></select>
+                </label>
+                <span class="tol-slash" aria-hidden="true">/</span>
+                <label class="tol-part">
+                  <span>Shaft letter</span>
+                  <select id="shaft-letter" aria-label="Shaft fundamental deviation letter"></select>
+                </label>
+                <label class="tol-part">
+                  <span>Shaft grade</span>
+                  <select id="shaft-grade" aria-label="Shaft tolerance grade"></select>
+                </label>
+              </div>
+              <p class="control-note muted">Changing a part makes a custom fit. Grades IT5 to IT11; shaft letters c to u (t exists only above 24&nbsp;mm).</p>
+            </fieldset>
+            <div class="presets">
+              <h3>Worked examples</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="ex25g6">25 H7/g6</button></li>
+                <li><button type="button" class="btn" data-preset="ex25p6">25 H7/p6</button></li>
+                <li><button type="button" class="btn" data-preset="ex50s6">50 H7/s6</button></li>
+                <li><button type="button" class="btn" data-preset="ex10f7">10 H8/f7</button></li>
+                <li><button type="button" class="btn" data-preset="ex100c11">100 H11/c11</button></li>
+                <li><button type="button" class="btn" data-preset="ex40k6">40 H7/k6</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="controls-col tol-readouts-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>Fit</dt>
+                <dd><b data-out="fitName">–</b></dd>
+                <dd class="sub" data-out="fitType">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Hole limits</dt>
+                <dd><b data-out="holeLimits">–</b> mm</dd>
+                <dd class="sub" data-out="holeDev">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Shaft limits</dt>
+                <dd><b data-out="shaftLimits">–</b> mm</dd>
+                <dd class="sub" data-out="shaftDev">–</dd>
+              </div>
+              <div class="readout">
+                <dt data-out="maxLabel">Max clearance</dt>
+                <dd><b data-out="maxC">–</b> µm</dd>
+                <dd class="sub" data-out="maxSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt data-out="minLabel">Min clearance</dt>
+                <dd><b data-out="minC">–</b> µm</dd>
+                <dd class="sub" data-out="minSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Hole tolerance</dt>
+                <dd><b data-out="holeIT">–</b> µm</dd>
+                <dd class="sub" data-out="holeITsub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Shaft tolerance</dt>
+                <dd><b data-out="shaftIT">–</b> µm</dd>
+                <dd class="sub" data-out="shaftITsub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>One screen pixel</dt>
+                <dd><b data-out="pixel">–</b></dd>
+                <dd class="sub" data-out="pixelSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Size ranges used</dt>
+                <dd class="sub" data-out="ranges">–</dd>
+              </div>
+            </dl>
+            <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">How the limits come out of the ISO 286 tables, with your current fit plugged in. Deviations in micrometres (µm), sizes in millimetres.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">i = 0.45 &#8731;D + 0.001 D</span>
+          <span class="eq-note"><span data-eq="i">–</span></span>
+        </li>
+        <li>
+          <span class="eq">IT = factor &times; i</span>
+          <span class="eq-note"><span data-eq="it">–</span></span>
+        </li>
+        <li>
+          <span class="eq">hole H: EI = 0, ES = EI + IT</span>
+          <span class="eq-note"><span data-eq="hole">–</span></span>
+        </li>
+        <li>
+          <span class="eq" data-eq="shaftRule">shaft: es = fundamental deviation, ei = es &minus; IT</span>
+          <span class="eq-note"><span data-eq="shaft">–</span></span>
+        </li>
+        <li>
+          <span class="eq">limit size = D + deviation</span>
+          <span class="eq-note"><span data-eq="limits">–</span></span>
+        </li>
+        <li>
+          <span class="eq">max clearance = ES &minus; ei</span>
+          <span class="eq-note"><span data-eq="maxC">–</span></span>
+        </li>
+        <li>
+          <span class="eq">min clearance = EI &minus; es</span>
+          <span class="eq-note"><span data-eq="minC">–</span></span>
+        </li>
+        <li>
+          <span class="eq">pixels = length &divide; pixel size</span>
+          <span class="eq-note"><span data-eq="pixels">–</span></span>
+        </li>
+        <li>
+          <span class="eq">on screen = length &times; magnification</span>
+          <span class="eq-note"><span data-eq="mag">–</span></span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="card pixel-card" id="pixel-card"></section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Limits and fits, explained</h2>
+
+        <h3>What an IT grade is</h3>
+        <p>No part comes out exactly to size, so a drawing gives a tolerance: how far the real size may vary. ISO 286 standardises tolerances as international tolerance grades, IT01 to IT18. A lower number is tighter. The width of a grade also grows with size, because big parts are harder to make accurately: an IT7 tolerance is <span data-calc="it7at6">12</span>&nbsp;µm wide at 6&nbsp;mm but <span data-calc="it7at250">46</span>&nbsp;µm at 250&nbsp;mm. Sizes are grouped into ranges such as "over 18 up to and including 30&nbsp;mm", and every size in a range shares the same values.</p>
+        <p>The older edition of the standard (via Engineers Edge) gives the formula behind grades IT5 to IT18: a tolerance factor <span class="eq-inline">i = 0.45 &#8731;D + 0.001 D</span> micrometres, with <var>D</var> the geometric mean of the size range in millimetres, multiplied by 7 for IT5, 10 for IT6, 16 for IT7 and so on up to 100 for IT11. The published table values are rounded, so the table, not the formula, is what you use.</p>
+
+        <h3>Fundamental deviation letters</h3>
+        <p>The grade says how wide the tolerance zone is; a letter says where it sits relative to the nominal size. Capital letters are for holes, lower case for shafts. Shafts lettered c, d, e, f and g sit below the nominal size, by a fixed amount called the fundamental deviation, so they are always smaller than the hole. An h shaft touches the nominal size from below. js straddles it equally (&plusmn;IT/2). k, m, n, p, r, s, t and u sit above it by increasing amounts, so the shaft starts to overlap the hole. For a few letters the standard splits a size range in two, for example u uses different values over 18 up to 24&nbsp;mm and over 24 up to 30&nbsp;mm.</p>
+
+        <h3>The hole-basis system, and why it is preferred</h3>
+        <p>In the hole-basis system every hole is H: its smallest size is exactly the nominal size and it can only be larger. The fit is chosen by choosing the shaft. That suits the workshop: holes are made with fixed-size tools such as drills and reamers and checked with fixed-size plug gauges, while a shaft can be turned or ground to any diameter. One reamer and one gauge for each hole size then serve every kind of fit (RoyMech puts it as keeping the standard hole-making tools and processes). Machinery's Handbook adds that a shaft-basis system (h shafts, holes chosen to suit) is the one to use when a common shaft mates with several holes.</p>
+
+        <h3>How to read "25 H7/g6"</h3>
+        <p>25 is the nominal size in millimetres. H7 is the hole: letter H, grade IT7. g6 is the shaft: letter g, grade IT6. Hole first, then shaft. Where the hole's zone sits wholly above the shaft's, there is always a gap (a clearance fit). Where it sits wholly below, the parts always overlap and must be pressed or shrunk together (an interference fit). Where the zones overlap, a pair might be either (a transition fit).</p>
+
+        <h3>Worked example: 25 H7/g6</h3>
+        <p>At 25&nbsp;mm the 18 to 30&nbsp;mm range applies. IT7 is <span data-calc="ex-it7">21</span>&nbsp;µm and IT6 is <span data-calc="ex-it6">13</span>&nbsp;µm. The hole is H, so it runs from 25.000 to 25.021&nbsp;mm. The fundamental deviation of g at this size is &minus;7&nbsp;µm, so the shaft runs from 25 &minus; 0.007 &minus; 0.013 = 24.980&nbsp;mm up to 24.993&nbsp;mm. The loosest pair, the biggest hole with the smallest shaft, has 25.021 &minus; 24.980 = 0.041&nbsp;mm of clearance; the tightest pair has 25.000 &minus; 24.993 = 0.007&nbsp;mm. Always a gap: a sliding fit. These are the same numbers as the preferred-fit tables of ANSI B4.2; this page's unit tests compare all 280 of those tabulated fits (28 sizes, 10 fits) with its own calculation.</p>
+
+        <h3>Why tight tolerances are invisible at 1:1</h3>
+        <p>On a 24-inch 1920 &times; 1080 monitor one pixel is about <span data-calc="px24">0.277</span>&nbsp;mm across. The whole 21&nbsp;µm tolerance of a 25&nbsp;mm H7 hole is <span data-calc="frac24">0.08</span> of one pixel, and the largest gap in 25 H7/g6 is <span data-calc="gap24">0.15</span> of a pixel. A typical human hair, about 70&nbsp;µm thick, is <span data-calc="hair24">about a quarter of</span> a pixel. So in the true-size drawing the hole and the shaft are the same circle, which is exactly how they look in your hand: a sliding fit and a press fit are indistinguishable by eye.</p>
+        <p>Workshops measure these sizes with instruments made for micrometre work: outside micrometers and bore gauges, comparators set against gauge blocks, air gauges and coordinate measuring machines. On the production line, go/no-go gauges do most of the work: a plug gauge made at the hole's smallest limit must go in, one made at its largest limit must not.</p>
+
+        <h3>What is approximate</h3>
+        <p>Sizes in ISO 286 hold at the standard reference temperature of 20&nbsp;°C (ISO 1). A part that is warmer or colder is a different size, and over tens of micrometres that matters. The drawing treats every surface as a perfect cylinder: real parts are also slightly out of round, not perfectly straight and rough on a small scale, and those form errors are specified separately; they are ignored here. The magnified strips show diameters, as if the shaft rested against the far side of the hole so that all of the clearance appears on one side; when the shaft is centred, the gap on each side is half that. The js values here are &plusmn;IT/2 exactly, as in the RoyMech (ISO 286-2) and Miki Pulley (JIS B 0401) tables; the 1988 edition of ISO 286-1 rounded odd IT values in grades 7 to 11 down to the even value below, and some published tables, such as Mitsubishi's, still do.</p>
+        <div class="notice">
+          <p>Values reproduced from ISO 286 tables via the cited sources, each checked against at least two of them. This is a learning tool: check the current edition of ISO 286 before using a value on a drawing.</p>
+        </div>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Measuring tools and engineering drawing references. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or tool name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: digital micrometer</li>
+            <li class="affiliate-placeholder">Affiliate link slot: limits and fits handbook</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <p class="muted small">ISO 286 itself is not freely available, so every table value on this page was taken from reproductions and checked against at least two of them; the unit tests repeat every check. Retrieved 7 October 2026.</p>
+      <ul class="small" id="source-list">
+        <li><a href="https://en.wikipedia.org/wiki/IT_Grade">Wikipedia, &quot;IT Grade&quot;, ISO 286 Table 1 (citing ISO 286-1:2010)</a>: IT5 to IT11 values for every size range; ISO 286-1:2010 preferred fits.</li>
+        <li><a href="https://www.engineersedge.com/international_tol.htm">Engineers Edge, International Tolerance (IT) Grades, ISO 286-1:2010</a>: IT values (second source).</li>
+        <li><a href="https://www.roymech.co.uk/Useful_Tables/ISO_Tolerances/ISO_Tol_T.htm">RoyMech, ISO Tolerance Band T tables</a>: IT values (third source); first size range taken as 1 to 3 mm; the hole-basis system keeps the standard hole-making tools and processes (<a href="https://www.roymech.co.uk/Useful_Tables/ISO_Tolerances/how-to-use-iso-tolerances/">how-to page</a>).</li>
+        <li><a href="https://www.engineersedge.com/mechanical,045tolerances/formulas_international_tolerance_it_grades__15523.htm">Engineers Edge, Formulas for International Tolerance Grades (ISO 286-1:1988)</a>: i = 0.45∛D + 0.001D, D as the geometric mean of the size step, IT5 = 7i ... IT11 = 100i.</li>
+        <li><a href="https://www.roymech.co.uk/Useful_Tables/ISO_Tolerances/ISO_SHAFT_LIM_1.html">RoyMech, ISO shaft fundamental deviations a to zc, 0 to 500 mm</a>: shaft fundamental deviations c to u, including the intermediate size ranges.</li>
+        <li><a href="https://faculty.ksu.edu.sa/sites/default/files/iso_fit_tables_ams_feb13_16.pdf">S. Darwish, Fits and Tolerances notes, King Saud University (scan of ISO 286-1:1988 Tables 2 and 3)</a>: shaft fundamental deviations (second full source); the js and k rules.</li>
+        <li><a href="https://www.mitsubishicarbide.net/contents/mhg/enuk/html/product/technical_information/information/pdf/fit_tolerance_table_shaft.pdf">Mitsubishi Materials, Fit tolerance table (shaft), JIS B 0401</a>: shaft limit deviations c9 to u6, confirming the fundamental deviations; js rounding.</li>
+        <li><a href="https://www.mikipulley.co.jp/en/resources/standards-fitting-tolerances">Miki Pulley, List of Fit Tolerances (excerpt from JIS B 0401)</a>: shaft limit deviations d8 to r6, 3 to 500 mm, confirming d to r.</li>
+        <li><a href="https://faculty.ksu.edu.sa/sites/default/files/2_-_n7h6_ansi_b4_2_fit.pdf">Machinery&#x27;s Handbook 26th ed., ANSI B4.2-1978 (R1994) preferred metric fits, Tables 11 to 13 (posted by King Saud University)</a>: names of the ten preferred fits; 280 worked fits (28 sizes × 10 fits) used as exact unit tests; when to use the shaft-basis system.</li>
+        <li><a href="https://sdp-si.com/D815/D815-Reference-Section.pdf">SDP/SI D815 Reference Section, Preferred fits for shafts and holes</a>: preferred fit names (second source).</li>
+        <li><a href="https://www.engineersedge.com/manufacturing/preferred_mechanical_tolerances_metric_iso_286_13166.htm">Engineers Edge, Preferred Mechanical Tolerances Metric ISO 286</a>: preferred fit names (third source).</li>
+        <li><a href="https://gppanchkula.ac.in/wp-content/uploads/2021/02/E-Contents-of-MECHANICAL-ENGG-DRAWING.pdf">Govt. Polytechnic Panchkula, Mechanical Engineering Drawing e-content</a>: diameter steps 1-3, 3-6, 6-10 ... for the geometric mean D.</li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7339725/">Phillips et al. 2016, &quot;The 2016 Revision of ISO 1&quot;, J. Res. NIST 121:498</a>: sizes are specified at the standard reference temperature of 20 °C.</li>
+        <li>Human hair, typically 70&nbsp;µm thick: Ley 1999, "Diameter of a Human Hair", <a href="https://hypertextbook.com/facts/1999/BrianLey.shtml">The Physics Factbook</a> (via <code>js/data/references.js</code>). Pixel-size objects: sources listed in <code>js/data/references.js</code>.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This tool needs JavaScript to run.</p></noscript>
+</body>
+</html>

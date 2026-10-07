@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth to Orbit at True Scale: Altitude, Orbital Speed &amp; Escape Velocity | Real-Scale Physics</title>
+  <meta name="description" content="Earth drawn exactly 2 cm across on your screen: the edge of space is 0.16 mm up, the ISS 0.63 mm, geostationary orbit 5.6 cm. See why orbit is about speed, not height, with orbital and escape speed charts.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/earth-orbit.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Earth to orbit at true scale: altitude, orbital speed and escape velocity">
+  <meta property="og:description" content="With Earth 2 cm across, the ISS flies 0.63 mm above the surface at 7.7 km/s. Orbit is about speed, not height.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/earth-orbit.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/earth-orbit.js"></script>
+</head>
+<body class="page-earth-orbit layout-tall">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Astrophysics</p>
+      <h1>Earth to orbit: altitude, orbital speed and escape velocity</h1>
+      <p class="lead">Earth is drawn exactly 2&nbsp;cm across, as at the closest stop of the space page. At that scale the edge of space is thinner than a pixel and the International Space Station skims <span data-calc="issMm">0.63 mm</span> above the surface. What makes orbit hard is speed, not height.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">Earth 2&nbsp;cm across, orbits at their true heights (seen from above the North Pole), and speed against height.</p>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Earth 2 cm across with satellite orbits, and a chart of orbital and escape speed"></canvas>
+          <span class="time-badge" id="rate-badge">TIME ×600 (10 minutes per second)</span>
+        </div>
+
+        <div class="sim-controls">
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space">Pause</button>
+          <fieldset class="segmented segmented--small rate-group" id="rate-group">
+            <legend class="visually-hidden">Time rate</legend>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-real" value="real"><label for="rate-real">Real time</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-min" value="min"><label for="rate-min">1 min/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-min10" value="min10" checked><label for="rate-min10">10 min/s</label></span>
+            <span class="seg-item"><input type="radio" name="rate" id="rate-hour" value="hour"><label for="rate-hour">1 hour/s</label></span>
+          </fieldset>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">Press <kbd>Space</kbd> to play or pause. Satellites are drawn as dots so you can see them; at this scale the whole ISS would be <span data-calc="issSizeNm">0.17 micrometres</span> long. In real time the ISS creeps <span data-calc="issScreenSpeed">0.012 mm/s</span> across your screen.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="alt-range">Your satellite's height <var>h</var></label>
+                <span class="num-field">
+                  <input type="number" id="alt-num" inputmode="decimal" aria-label="Your satellite's height above the surface, kilometres">
+                  <span class="unit" aria-hidden="true">km</span>
+                </span>
+              </div>
+              <input type="range" id="alt-range" aria-describedby="alt-note">
+              <div class="range-hint" aria-hidden="true"><span>100 km</span><span>log scale</span><span>400,000 km</span></div>
+              <p class="control-note muted" id="alt-note">A circular orbit at this height is drawn as a dashed ring, with its speed on the chart.</p>
+            </div>
+            <div class="presets">
+              <h3>Heights to try</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="karman">Kármán line, 100 km</button></li>
+                <li><button type="button" class="btn" data-preset="iss">ISS, about 400 km</button></li>
+                <li><button type="button" class="btn" data-preset="gps">GPS, 20,200 km</button></li>
+                <li><button type="button" class="btn" data-preset="geo">Geostationary</button></li>
+                <li><button type="button" class="btn" data-preset="moon">The Moon's distance</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">Your satellite</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout">
+                <dt>Orbital speed <var>v</var></dt>
+                <dd><b data-out="v">–</b> km/s</dd>
+                <dd class="sub"><span data-out="vKmh">–</span> km/h</dd>
+              </div>
+              <div class="readout">
+                <dt>One lap takes <var>T</var></dt>
+                <dd><b data-out="T">–</b></dd>
+              </div>
+              <div class="readout">
+                <dt>Escape speed there</dt>
+                <dd><b data-out="vEsc">–</b> km/s</dd>
+                <dd class="sub">√2 × orbital speed</dd>
+              </div>
+              <div class="readout">
+                <dt>Above the 2 cm marble</dt>
+                <dd><b data-out="hMm">–</b></dd>
+                <dd class="sub" data-out="hPx">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Energy per kg to get there (no air)</dt>
+                <dd><b data-out="eTotal">–</b> MJ</dd>
+                <dd class="sub" data-out="eSplit">–</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="controls-col">
+            <h3 class="readouts-title">The ISS at Earth = 2 cm</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout">
+                <dt>Real speed</dt>
+                <dd><b data-out="issV">–</b> km/s</dd>
+                <dd class="sub">a lap every <span data-out="issT">–</span></dd>
+              </div>
+              <div class="readout">
+                <dt>Height on screen</dt>
+                <dd><b data-out="issMm">–</b> mm</dd>
+                <dd class="sub" data-out="issPx">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Speed on your screen</dt>
+                <dd><b data-out="issScreen">–</b></dd>
+                <dd class="sub" data-out="issScreenSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Energy split to reach it</dt>
+                <dd><b data-out="issSplit">–</b></dd>
+                <dd class="sub" data-out="issSplitSub">–</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Circular orbits round a spherical Earth, with your current satellite plugged in. <var>GM</var> = 3.986&nbsp;&times;&nbsp;10<sup>14</sup>&nbsp;m<sup>3</sup>/s<sup>2</sup>, <var>R</var> = 6,371&nbsp;km (mean radius).</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">scale = 2 cm / 12,742 km</span>
+          <span class="eq-note" data-eq="scale">–</span>
+        </li>
+        <li>
+          <span class="eq">r = R + h</span>
+          <span class="eq-note" data-eq="r">–</span>
+        </li>
+        <li>
+          <span class="eq">v = &radic;(GM / r)</span>
+          <span class="eq-note" data-eq="v">–</span>
+        </li>
+        <li>
+          <span class="eq">T = 2&pi; r / v</span>
+          <span class="eq-note" data-eq="T">–</span>
+        </li>
+        <li>
+          <span class="eq">v<sub>esc</sub> = &radic;(2GM / r) = &radic;2 v</span>
+          <span class="eq-note" data-eq="esc">–</span>
+        </li>
+        <li>
+          <span class="eq">r<sub>GEO</sub> = &#8731;(GM T<sub>sid</sub><sup>2</sup> / 4&pi;<sup>2</sup>)</span>
+          <span class="eq-note" data-eq="geo">–</span>
+        </li>
+        <li>
+          <span class="eq">climb = GM/R &minus; GM/r</span>
+          <span class="eq-note" data-eq="climb">–</span>
+        </li>
+        <li>
+          <span class="eq">speed = &frac12; v<sup>2</sup> = GM / 2r</span>
+          <span class="eq-note" data-eq="ke">–</span>
+        </li>
+        <li>
+          <span class="eq">on screen: h &times; scale</span>
+          <span class="eq-note" data-eq="screen">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">Low orbit is low. It is the speed that is hard.</h2>
+
+        <h3>At 2 cm, low Earth orbit hugs the surface</h3>
+        <p>Draw Earth 2&nbsp;cm across and each kilometre shrinks to <span data-calc="mmPerKm">0.0016 mm</span>. The Kármán line, the 100&nbsp;km height the FAI uses as the boundary of space, sits <span data-calc="karmanMm">0.16 mm</span> above the surface: thinner than one pixel on a 24-inch 1080p monitor, whose pixels are <span data-calc="pitchMm">0.277 mm</span> wide. The International Space Station orbits at about 250&nbsp;miles (<span data-calc="issKm">402 km</span>), just <span data-calc="issMm">0.63 mm</span> up. GPS satellites are <span data-calc="gpsCm">3.2 cm</span> out, geostationary satellites <span data-calc="geoCm">5.6 cm</span>, and the Moon <span data-calc="moonCm">60 cm</span> from Earth's centre, off the edge of most screens.</p>
+
+        <h3>What makes orbit hard is speed</h3>
+        <p>An orbiting spacecraft is falling all the time. It stays up because it moves sideways so fast that the ground curves away beneath it as quickly as it falls. At the ISS's height that takes <span data-calc="issV">7.67 km/s</span>, a lap every <span data-calc="issT">92 minutes</span>. Lifting each kilogram up to that height takes <span data-calc="climbMJ">3.7 MJ</span> of energy; getting it up to orbital speed takes <span data-calc="keMJ">29.4 MJ</span>. So only about <span data-calc="hPct">11%</span> of the energy goes into height and <span data-calc="sPct">89%</span> into speed. A rocket that went straight up to 400&nbsp;km and stopped would simply fall back down.</p>
+
+        <h3>Orbital speed and escape speed</h3>
+        <p>The speed for a circular orbit, <span class="eq-inline">v = &radic;(GM / r)</span>, falls the further out you go. The escape speed, enough to leave for good, is <span class="eq-inline">&radic;(2GM / r)</span>: always &radic;2 (about 1.41) times the orbital speed at the same distance, so a circular orbit always runs at about 71% of the local escape speed. From the surface, escape takes <span data-calc="vEsc">11.2 km/s</span>. At the ISS's height it is <span data-calc="issEsc">10.8 km/s</span>, barely less: 400&nbsp;km is a small step away from a planet 6,371&nbsp;km in radius.</p>
+
+        <h3>Why geostationary orbit is 35,786 km up</h3>
+        <p>The further out, the slower the lap. A satellite that goes round once per sidereal day (one turn of the Earth, <span data-calc="sidereal">23 h 56 min 4 s</span>) keeps pace with the ground and seems to hang still in the sky. Kepler's third law gives the radius: <span class="eq-inline">r = &#8731;(GM T<sup>2</sup> / 4&pi;<sup>2</sup>)</span> = <span data-calc="geoR">42,164 km</span> from Earth's centre, which is <span data-calc="geoAlt">35,786 km</span> above the equator, moving at only <span data-calc="geoV">3.07 km/s</span>. In the animation the marked spot on Earth's equator and the geostationary satellite turn together.</p>
+
+        <h3>Worked example: the ISS</h3>
+        <p>The orbit radius is 6,371&nbsp;+&nbsp;<span data-calc="issKm">402 km</span> = <span data-calc="issR">6,773 km</span>. The speed is <span class="eq-inline">&radic;(3.986 &times; 10<sup>14</sup> / <span data-calc="issRm">6.773 × 10⁶</span>)</span> = <span data-calc="issVms">7,671 m/s</span>, and one lap of 2&pi;&nbsp;&times;&nbsp;<span data-calc="issR">6,773 km</span> takes <span data-calc="issTs">5,548 s</span>, about <span data-calc="issT">92 minutes</span>. NASA rounds this to "every 90 minutes". On the 2&nbsp;cm Earth the station is <span data-calc="issMm">0.63 mm</span> up and moves at <span data-calc="issScreenSpeed">0.012 mm/s</span>: in real time it takes <span data-calc="hairS">5.8 s</span> to creep the width of a human hair.</p>
+
+        <h3>What is approximate</h3>
+        <p>Orbits are drawn as circles in one plane, seen from above the North Pole. The real ISS and GPS orbits are tilted to the equator and slightly oval. The ISS's height also wanders: air drag slowly lowers it and engine burns raise it again. NASA describes it as about 250&nbsp;miles up; its trajectory data for October 2026 puts it at <span data-calc="issOct">417 to 424 km</span>. Earth is drawn as a sphere with the mean radius, and heights are measured above that sphere, except the geostationary height, which is quoted above the equator (the two differ by 7&nbsp;km). The energy split ignores air drag, the energy lost fighting gravity during the climb, and the head start that Earth's spin gives a rocket launched eastwards, so real rockets need more than this. Satellites are drawn as dots; at this scale every real one is far smaller than a pixel.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Books on spaceflight and orbital mechanics, and globes. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: orbital mechanics book</li>
+            <li class="affiliate-placeholder">Affiliate link slot: desk globe</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small" id="source-list">
+        <li>Earth's mass parameter <var>GM</var> = 3.986004418&nbsp;&times;&nbsp;10<sup>14</sup>&nbsp;m<sup>3</sup>/s<sup>2</sup> and the sidereal day (86,164.09&nbsp;s): <a href="https://hpiers.obspm.fr/eop-pc/models/constants.html">IERS Earth Orientation Centre, "Useful constants"</a> (IERS numerical standards).</li>
+        <li>Earth's equatorial radius (6,378.137&nbsp;km, used for the geostationary height) and volumetric mean radius (6,371.000&nbsp;km, used for the drawn Earth and every other height): <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html">NASA Earth Fact Sheet</a>. The 2&nbsp;cm Earth is the space page's closest zoom stop.</li>
+        <li>Kármán line at 100&nbsp;km: FAI, <a href="https://web.archive.org/web/20210109154031/https://www.fai.org/page/icare-boundary">"100km Altitude Boundary for Astronautics"</a> (archived copy of the FAI page).</li>
+        <li>ISS height (about 250 miles) and lap time (about 90 minutes): <a href="https://www.nasa.gov/learning-resources/for-kids-and-students/what-is-the-international-space-station-grades-5-8/">NASA, "What Is the International Space Station?"</a>. Its length (109&nbsp;m): <a href="https://www.nasa.gov/international-space-station/space-station-facts-and-figures/">NASA, Space Station Facts and Figures</a>. October 2026 heights: <a href="https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.txt">NASA JSC public ISS trajectory data</a>.</li>
+        <li>GPS orbit, about 20,200&nbsp;km up, twice a day: <a href="https://www.gps.gov/space-segment">GPS.gov, "Space Segment"</a>.</li>
+        <li>The Moon's mean distance, 384,400&nbsp;km: <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html">NASA Moon Fact Sheet</a> (the same constant as the space page).</li>
+        <li>Width of a human hair (about 70 micrometres): Ley 1999, "Diameter of a Human Hair", The Physics Factbook, as used by the space page's Pixel size card.</li>
+        <li>Everything else (speeds, periods, the geostationary radius, energies, screen sizes) is computed from these values on the page.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

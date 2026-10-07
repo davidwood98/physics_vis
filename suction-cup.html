@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vacuum Gripper &amp; Suction Cup Sizing Calculator, Drawn at True Size | Real-Scale Physics</title>
+  <meta name="description" content="Size a vacuum gripper: enter the cup diameter, number of cups, vacuum level, payload, acceleration and orientation, and compare holding force with the required force using Schmalz's or SMC's safety factors. The cup is drawn at true size.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/suction-cup.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Vacuum gripper and suction cup sizing">
+  <meta property="og:description" content="Holding force against required force, with two manufacturers' safety conventions and a true-size cup on your screen.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/suction-cup.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/suction-cup.js"></script>
+</head>
+<body class="page-suction-cup">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Engineering</p>
+      <h1>Vacuum gripper and suction cup sizing</h1>
+      <p class="lead">Choose the cups, the vacuum and the load, and compare the holding force with the force needed once a safety factor is added. The cup is drawn at true size on the product. Switch on the sideways move to see why horizontal acceleration needs far more holding force than lifting.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="muted small toolbar-note">Side view. Cups and product at true size (the product is an illustrative box); forces are arrows on a stated scale.</p>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="sim-canvas" role="img" aria-label="Vacuum gripper sizing"></canvas>
+          <span class="time-badge" id="time-badge" hidden>REAL TIME 1:1</span>
+        </div>
+
+        <div class="sim-controls">
+          <label class="check"><input type="checkbox" id="accel-check"> Show horizontal acceleration</label>
+          <button type="button" class="btn btn-primary btn-play" id="play-btn" aria-keyshortcuts="Space" hidden>Pause</button>
+          <fieldset class="segmented segmented--small" id="time-scale" hidden>
+            <legend class="visually-hidden">Time scale</legend>
+            <input type="radio" name="timescale" id="ts-1" value="1" checked>
+            <label for="ts-1">1&times;</label>
+            <input type="radio" name="timescale" id="ts-0.5" value="0.5">
+            <label for="ts-0.5">0.5&times;</label>
+            <input type="radio" name="timescale" id="ts-0.1" value="0.1">
+            <label for="ts-0.1">0.1&times;</label>
+          </fieldset>
+        </div>
+        <p class="result" id="result" aria-live="polite"></p>
+        <div class="notice" role="note">
+          <p><strong>A teaching tool, not a substitute for the supplier's data:</strong> real cups lose force through leakage, porous or flexible products, cup deformation, wear and dynamic effects. Use the manufacturer's sizing tools and test with your product.</p>
+        </div>
+        <p class="sim-hint muted" id="sim-hint">The drawing is static until you switch on the horizontal acceleration. Then the gripper moves sideways back and forth at your acceleration, and the force needed rises while it speeds up or slows down.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="card-title">Controls</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="d-range">Cup diameter <var>d</var></label>
+                <span class="num-field">
+                  <input type="number" id="d-num" inputmode="decimal" aria-label="Cup diameter d, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="d-range">
+              <div class="range-hint" aria-hidden="true"><span>5 mm</span><span>150 mm</span></div>
+              <ul class="preset-list size-list" aria-label="Standard pad diameters (SMC)">
+                <li><button type="button" class="btn" data-size="10">ø10</button></li>
+                <li><button type="button" class="btn" data-size="20">ø20</button></li>
+                <li><button type="button" class="btn" data-size="32">ø32</button></li>
+                <li><button type="button" class="btn" data-size="50">ø50</button></li>
+                <li><button type="button" class="btn" data-size="80">ø80</button></li>
+                <li><button type="button" class="btn" data-size="100">ø100</button></li>
+                <li><button type="button" class="btn" data-size="150">ø150</button></li>
+              </ul>
+              <p class="control-note muted">Use the effective diameter if you know it: a real cup seals inside its rim, so it holds less than its nominal size suggests.</p>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="n-range">Number of cups <var>n</var></label>
+                <span class="num-field">
+                  <input type="number" id="n-num" inputmode="numeric" aria-label="Number of cups">
+                  <span class="unit" aria-hidden="true">cups</span>
+                </span>
+              </div>
+              <input type="range" id="n-range">
+              <div class="range-hint" aria-hidden="true"><span>1</span><span>8</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="p-range">Vacuum <var>p</var> (gauge)</label>
+                <span class="num-field">
+                  <input type="number" id="p-num" inputmode="decimal" aria-label="Vacuum, gauge pressure in kilopascals (negative)">
+                  <span class="unit" aria-hidden="true">kPa</span>
+                </span>
+              </div>
+              <input type="range" id="p-range">
+              <div class="range-hint" aria-hidden="true"><span>−10 kPa</span><span id="p-alt"></span><span>−90 kPa</span></div>
+              <p class="control-note muted">An ejector typically reaches about −60&nbsp;kPa (SMC's guide).</p>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <div class="control">
+              <div class="control-head">
+                <label for="m-range">Payload mass <var>m</var></label>
+                <span class="num-field">
+                  <input type="number" id="m-num" inputmode="decimal" aria-label="Payload mass, kilograms">
+                  <span class="unit" aria-hidden="true">kg</span>
+                </span>
+              </div>
+              <input type="range" id="m-range">
+              <div class="range-hint" aria-hidden="true"><span>10 g</span><span>log scale</span><span>100 kg</span></div>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="a-range">Acceleration <var>a</var></label>
+                <span class="num-field">
+                  <input type="number" id="a-num" inputmode="decimal" aria-label="Acceleration, metres per second squared">
+                  <span class="unit" aria-hidden="true">m/s²</span>
+                </span>
+              </div>
+              <input type="range" id="a-range">
+              <div class="range-hint" aria-hidden="true"><span>0</span><span id="a-alt"></span><span>50 m/s²</span></div>
+              <p class="control-note muted" id="a-note">–</p>
+            </div>
+
+            <div class="control">
+              <div class="control-head">
+                <label for="mu-range">Friction coefficient <var>&mu;</var></label>
+                <span class="num-field">
+                  <input type="number" id="mu-num" inputmode="decimal" aria-label="Friction coefficient between cup and product">
+                  <span class="unit" aria-hidden="true"></span>
+                </span>
+              </div>
+              <input type="range" id="mu-range">
+              <div class="range-hint" aria-hidden="true"><span>0.05</span><span>1</span></div>
+              <div class="control-row control-row--flush">
+                <label for="surface-select">Surface</label>
+                <select id="surface-select"></select>
+              </div>
+              <p class="control-note muted">Reference values from Schmalz, the low end where it gives a range. Schmalz says μ must be found by tests on the real product.</p>
+            </div>
+
+            <div class="control-row">
+              <span class="control-label" id="case-label">Load case</span>
+              <fieldset class="segmented segmented--small" aria-labelledby="case-label">
+                <legend class="visually-hidden">Load case</legend>
+                <input type="radio" name="loadcase" id="case-I" value="I" checked>
+                <label for="case-I" title="Cup horizontal, vertical lift">I: lift</label>
+                <input type="radio" name="loadcase" id="case-II" value="II">
+                <label for="case-II" title="Cup horizontal, sideways move">II: sideways</label>
+                <input type="radio" name="loadcase" id="case-III" value="III">
+                <label for="case-III" title="Cup vertical, product face vertical">III: cup vertical</label>
+              </fieldset>
+              <p class="control-note muted case-note" id="case-note">–</p>
+            </div>
+          </div>
+
+          <div class="controls-col">
+            <div class="control-row">
+              <span class="control-label" id="conv-label">Safety convention</span>
+              <fieldset class="segmented segmented--small" aria-labelledby="conv-label">
+                <legend class="visually-hidden">Safety convention</legend>
+                <input type="radio" name="convention" id="conv-schmalz" value="schmalz" checked>
+                <label for="conv-schmalz">Schmalz</label>
+                <input type="radio" name="convention" id="conv-smc" value="smc">
+                <label for="conv-smc">SMC</label>
+              </fieldset>
+            </div>
+            <div class="control-row" id="s-row">
+              <label for="s-select">Safety factor <var>S</var></label>
+              <select id="s-select"></select>
+            </div>
+            <p class="control-note muted conv-note" id="conv-note">–</p>
+
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout">
+                <dt>Holding force <var>&Delta;p</var>&middot;<var>A</var>&middot;<var>n</var></dt>
+                <dd><b data-out="hold">–</b> N</dd>
+                <dd class="sub"><span data-out="holdKgf">–</span> kgf, theoretical, static</dd>
+              </div>
+              <div class="readout">
+                <dt>Required force</dt>
+                <dd><b data-out="req">–</b> N</dd>
+                <dd class="sub" data-out="reqSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Safety factor</dt>
+                <dd><b data-out="sf">–</b> achieved, <span data-out="sfNeed">–</span> needed</dd>
+                <dd class="sub" data-out="verdict">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Max mass at this setup</dt>
+                <dd><b data-out="mMax">–</b></dd>
+              </div>
+              <div class="readout">
+                <dt>Max acceleration</dt>
+                <dd><b data-out="aMax">–</b></dd>
+                <dd class="sub" data-out="aMaxSub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>Vacuum</dt>
+                <dd><b data-out="vac">–</b> kPa gauge</dd>
+                <dd class="sub"><span data-out="vacPct">–</span>% vacuum, <span data-out="vacAbs">–</span> kPa absolute (standard atmosphere 101.325 kPa)</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>To pass with <span data-out="nCups">–</span></dt>
+                <dd data-out="fix">–</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="product-row">
+          <h3 class="product-title">Product (illustrative box)</h3>
+          <div class="controls-grid">
+            <div class="control">
+              <div class="control-head">
+                <label for="L-range">Length</label>
+                <span class="num-field">
+                  <input type="number" id="L-num" inputmode="decimal" aria-label="Product length, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="L-range">
+              <div class="range-hint" aria-hidden="true"><span>2 mm</span><span>log scale</span><span>2,500 mm</span></div>
+            </div>
+            <div class="control">
+              <div class="control-head">
+                <label for="H-range">Height</label>
+                <span class="num-field">
+                  <input type="number" id="H-num" inputmode="decimal" aria-label="Product height, millimetres">
+                  <span class="unit" aria-hidden="true">mm</span>
+                </span>
+              </div>
+              <input type="range" id="H-range">
+              <div class="range-hint" aria-hidden="true"><span>2 mm</span><span>log scale</span><span>500 mm</span></div>
+            </div>
+            <div class="presets">
+              <h3>Examples</h3>
+              <ul class="preset-list">
+                <li><button type="button" class="btn" data-preset="part">Small part, 0.2 kg</button></li>
+                <li><button type="button" class="btn" data-preset="box">Box moved sideways, 5 kg</button></li>
+                <li><button type="button" class="btn" data-preset="glass">Glass pane on edge</button></li>
+                <li><button type="button" class="btn" data-preset="sheet">Steel sheet (Schmalz's example)</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">Theoretical holding force against the force each convention asks for, with your current values plugged in.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">F<sub>hold</sub> = &Delta;p &times; A &times; n, &nbsp;A = &pi; d<sup>2</sup> / 4</span>
+          <span class="eq-note" data-eq="hold">–</span>
+        </li>
+        <li>
+          <span class="eq">I: F = m (g + a) S</span>
+          <span class="eq-note" data-eq="I">–</span>
+        </li>
+        <li>
+          <span class="eq">II: F = m (g + a / &mu;) S</span>
+          <span class="eq-note" data-eq="II">–</span>
+        </li>
+        <li>
+          <span class="eq">III: F = (m / &mu;)(g + a) S</span>
+          <span class="eq-note" data-eq="III">–</span>
+        </li>
+        <li>
+          <span class="eq">SMC: W = P &times; S<sub>pad</sub> &times; 0.1 / t &ge; m g</span>
+          <span class="eq-note" data-eq="smc">–</span>
+        </li>
+        <li>
+          <span class="eq">Safety factor achieved = F<sub>hold</sub> / load</span>
+          <span class="eq-note" data-eq="sf">–</span>
+        </li>
+        <li>
+          <span class="eq">Vacuum: % = |p| / 101.325, &nbsp;p<sub>abs</sub> = 101.325 + p</span>
+          <span class="eq-note" data-eq="vac">–</span>
+        </li>
+        <li>
+          <span class="eq">pixels = metres &times; scale</span>
+          <span class="eq-note" data-eq="scale">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">How a suction cup holds, and how much it can hold</h2>
+
+        <h3>Vacuum doesn't pull: the air pushes</h3>
+        <p>A suction cup has no grip of its own. Pumping air out of the cup lowers the pressure inside, and the atmosphere outside, about 101&nbsp;kPa at sea level, presses the product against the cup. The holding force is the pressure difference times the area it acts on: <span class="eq-inline">F = &Delta;p &times; A</span>. A gauge reading of &minus;60&nbsp;kPa means the cup is 60&nbsp;kPa below the outside air, which is <span data-calc="pct60">59</span>% of a perfect vacuum. Even a perfect vacuum could only ever give 101&nbsp;kPa of pressure difference.</p>
+
+        <h3>Area matters more than vacuum</h3>
+        <p>The force grows with the area, so with the square of the diameter: double the diameter and the force is four times as big, while doubling the vacuum only doubles it. A deeper vacuum also wears cups faster and takes longer to build up, so the usual fix for a weak gripper is bigger or more cups. The area is the one that is really sealed: a real cup holds less than its nominal diameter suggests. Schmalz's SUF&nbsp;90 cup, for example, lists <span data-calc="suf">328</span>&nbsp;N at &minus;60&nbsp;kPa, where the full 90&nbsp;mm would give <span data-calc="sufNom">382</span>&nbsp;N: it behaves like an <span data-calc="sufEff">83</span>&nbsp;mm cup.</p>
+
+        <h3>Three load cases</h3>
+        <p><strong>I: cup horizontal, lifting.</strong> The cups carry the weight plus the force to accelerate it upwards, <span class="eq-inline">m (g + a)</span>. <strong>II: cup horizontal, moving sideways.</strong> The cups still carry the weight, but the sideways push has to come through friction between the cup lip and the product. Friction is at most &mu; times the force pressing them together, so producing a sideways force <span class="eq-inline">m a</span> needs an extra <span class="eq-inline">m a / &mu;</span> of holding force. <strong>III: cup vertical.</strong> The cup is on a vertical face, so the whole weight hangs on friction: the cups need <span class="eq-inline">(m / &mu;)(g + a)</span>.</p>
+
+        <h3>Why sideways moves are expensive</h3>
+        <p>With a dry friction coefficient of 0.5, every 1&nbsp;m/s<sup>2</sup> of sideways acceleration needs as much extra holding force as 2&nbsp;m/s<sup>2</sup> of upward acceleration. On an oily surface, where &mu; can be as low as 0.1, it needs as much as 10&nbsp;m/s<sup>2</sup> of lift. That is why products slide off grippers that lift them perfectly well, and why emergency stops, which brake the hardest, are the case to check.</p>
+
+        <h3>Why safety factors differ between manufacturers</h3>
+        <p>Schmalz puts the acceleration and the friction into the formula and then multiplies by a safety factor of at least 1.5 for smooth, dense workpieces, 2 or more for porous, rough or oiled ones, and 2.5 or more if the workpiece is swivelled. SMC works from the static weight alone and asks for a theoretical lifting force 4 times the weight when the pad is horizontal and 8 times when it is vertical. SMC points out that its theoretical force is a static value, so the safety factor has to allow for the real operating conditions such as acceleration, wind pressure and impacts, and it advises keeping sideways acceleration as low as possible. Neither is wrong: they put the margin in different places. SMC's rule is simpler and more cautious at low acceleration; Schmalz's grows with the acceleration and friction you enter. With &mu; = 0.5 and S = 1.5, Schmalz asks for more than SMC once a sideways move accelerates faster than <span data-calc="cross">12.3</span>&nbsp;m/s<sup>2</sup>.</p>
+
+        <h3>Worked example</h3>
+        <p>Schmalz's own example lifts a 2.5&nbsp;m &times; 1.25&nbsp;m &times; 2.5&nbsp;mm steel sheet (61.33&nbsp;kg) and moves it sideways at 5&nbsp;m/s<sup>2</sup> with &mu; = 0.5 and S = 1.5: <span class="eq-inline">61.33 &times; (9.81 + 5 / 0.5) &times; 1.5</span> = <span data-calc="schII">1,822</span>&nbsp;N. Shared over six cups that is <span data-calc="perCup">304</span>&nbsp;N each, which at &minus;60&nbsp;kPa needs an effective diameter of <span data-calc="dSch">80</span>&nbsp;mm; Schmalz picks six SUF&nbsp;90 cups. SMC's rule for the same sheet asks for 4 &times; 61.33 &times; 9.81 = <span data-calc="smcII">2,407</span>&nbsp;N, <span data-calc="smcPerCup">401</span>&nbsp;N per cup, which needs <span data-calc="dSmc">92</span>&nbsp;mm: SMC's next size up is &oslash;100. Load the "Steel sheet" example to try it.</p>
+
+        <h3>What is simplified</h3>
+        <p>The holding force here is the theoretical, static value for a perfectly sealed cup on a flat, rigid product. Leaks, porous materials such as cardboard, flexible products that peel away, worn or deformed cups, the time to build up vacuum, the moment from an off-centre load and air resistance on large sheets all reduce what a real gripper can hold. The product is drawn as a plain box and its size does not change the forces; only its mass does.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Vacuum handling guides and gripper design books. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: vacuum handling handbook</li>
+            <li class="affiliate-placeholder">Affiliate link slot: suction cup starter kit</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Schmalz convention (load cases I to III, safety factors 1.5 and 2.0, friction reference values, the worked example): J. Schmalz GmbH, Vacuum Knowledge, <a href="https://www.schmalz.com/en/vacuum-knowledge/the-vacuum-system-and-its-components/system-design-calculation-example/theoretical-holding-force-of-a-suction-cup">"Theoretical Holding Force of a Suction Cup"</a>; <a href="https://www.schmalz.com/en/support/know-how/vacuum-knowledge/the-vacuum-system-and-its-components/vacuum-suction-cups/design-of-the-suction-cup">"Design of the Suction Cup"</a> (F = &Delta;p &times; A with the effective suction area, safety factor 2.5 for swivelling, the diameter shortcut and its examples); <a href="https://www.schmalz.com/en/support/know-how/vacuum-knowledge/the-vacuum-system-and-its-components/system-design-calculation-example/suction-cup-selection">"Suction Cup Selection"</a> (force per cup); <a href="https://www.schmalz.com/en/support/know-how/vacuum-knowledge/the-vacuum-system-and-its-components/system-design-calculation-example/weight-calculation-of-a-workpiece">"Weight Calculation of a Workpiece"</a> (sheet mass, glass density 2.50&nbsp;kg/dm<sup>3</sup>).</li>
+        <li>SUF&nbsp;90 cup: Schmalz product page <a href="https://www.schmalz.com/en/products/vacuum-technology-for-automation-301607/vacuum-components-301608/vacuum-suction-cups-301609/flat-suction-cups-round-301610/flat-suction-cups-suf-301611/10.01.01.13956">Flat Suction Cup SUF 90 NBR-55</a> (suction force 328&nbsp;N at &minus;0.6&nbsp;bar).</li>
+        <li>SMC convention (W = P &times; S &times; 0.1 &times; 1/t, t &ge; 4 horizontal and &ge; 8 vertical, the ejector guide of &minus;60&nbsp;kPa, standard pad diameters, the theoretical lifting force table): SMC Corporation, <a href="https://www.smcworld.com/assets/products/pickup/en-jp/vacuum_device/select/4-P0878-883_en.pdf">Vacuum Equipment Model Selection</a>, catalogue pages 878 to 883.</li>
+        <li>Standard atmosphere 101.325&nbsp;kPa and standard gravity 9.80665&nbsp;m/s<sup>2</sup> (1&nbsp;kgf = 9.80665&nbsp;N) are exact definitions. Schmalz's formulas round g to 9.81&nbsp;m/s<sup>2</sup>; this page uses 9.80665, a 0.04% difference.</li>
+        <li>Product sizes and masses in the examples are illustrative, except the steel sheet, which is Schmalz's. All sources retrieved 7 October 2026. The unit tests reproduce Schmalz's and SMC's published numbers.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

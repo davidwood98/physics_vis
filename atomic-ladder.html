@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atomic Scale Ladder: Zoom Into One Screen Pixel | Real-Scale Physics</title>
+  <meta name="description" content="Start from one real pixel of your calibrated screen and zoom down through a hair, a blood cell, a bacterium, a virus, DNA, an atom and a nucleus to the limit on the size of a quark, with every object at its true size.">
+  <!-- Site address: https://davidwood98.github.io/physics_vis/ (GitHub Pages). If it moves, update it in every page, robots.txt and sitemap.xml -->
+  <link rel="canonical" href="https://davidwood98.github.io/physics_vis/atomic-ladder.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Real-Scale Physics">
+  <meta property="og:title" content="Atomic scale ladder: the pixel at the small end">
+  <meta property="og:description" content="Zoom from one pixel of your own screen down to atoms, nuclei and the quark-size limit, everything at its true size.">
+  <meta property="og:url" content="https://davidwood98.github.io/physics_vis/atomic-ladder.html">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%232563eb' stroke-width='3'/%3E%3Ccircle cx='28' cy='16' r='4' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Pre-paint: show ad placeholders for ?showslots=1 without layout shift -->
+  <script>if (/[?&]showslots=1(&|$)/.test(location.search)) document.documentElement.classList.add('show-slots');</script>
+  <script type="module" src="js/atomic-ladder.js"></script>
+</head>
+<body class="page-atomic-ladder layout-tall">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./">Real-Scale Physics</a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a href="./">Simulations</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a class="support-link" data-donate href="#">Support this site</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="wrap ad-slot ad-slot--leaderboard" data-ad-slot="leaderboard" aria-label="Advertisement">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-box"></div>
+  </aside>
+
+  <main id="main" class="wrap">
+    <div class="page-intro">
+      <p class="eyebrow">Atomic scale</p>
+      <h1>Atomic scale ladder: the pixel at the small end</h1>
+      <p class="lead">Start from one real pixel of your calibrated screen and zoom down, a power of ten at a time, through a hair, a blood cell, a bacterium, a virus, DNA, an atom and its nucleus to the limit on the size of a quark. Everything is drawn at its true size for the current zoom.</p>
+    </div>
+
+    <div class="sim-layout">
+      <section class="card sim-card" aria-labelledby="sim-heading">
+        <h2 id="sim-heading" class="visually-hidden">Simulation</h2>
+
+        <div class="sim-toolbar">
+          <p class="toolbar-note"><a href="solar.html#milkyway">The pixel at both ends of the scale: the Milky Way as one pixel &rarr;</a></p>
+          <div class="scale-status">
+            <span class="badge badge--warn" id="scale-badge">Approximate scale: calibrate for 1:1</span>
+            <button type="button" class="btn btn-small" id="calibrate-btn">Calibrate screen</button>
+            <small class="muted">Moved to another monitor? Recalibrate</small>
+          </div>
+        </div>
+
+        <div class="canvas-wrap ladder-wrap" id="ladder-wrap">
+          <canvas id="sim-canvas" role="img" tabindex="0" aria-label="Atomic scale ladder" aria-describedby="sim-hint"></canvas>
+          <div class="ladder-hud" id="travel-hud" hidden></div>
+          <div class="ladder-tip" id="ladder-tip" role="tooltip" hidden></div>
+        </div>
+
+        <div class="zoom-row">
+          <button type="button" class="btn btn-icon" id="rail-out" aria-label="Zoom out to the previous place" aria-keyshortcuts="-">&minus;</button>
+          <span class="zoom-end">1 pixel (1:1)</span>
+          <input type="range" id="rail-range" min="0" max="1000" step="1" value="0" aria-label="Position along the journey, from one true-size pixel down to the quark-size limit">
+          <span class="zoom-end">Quark-size limit</span>
+          <button type="button" class="btn btn-icon" id="rail-in" aria-label="Zoom in to the next place" aria-keyshortcuts="+">+</button>
+        </div>
+        <div class="rail-stops" id="rail-stops" role="group" aria-label="Places to visit">
+          <span class="muted small">Places to visit:</span>
+        </div>
+        <p class="result ladder-fact" id="fact" aria-live="polite"></p>
+        <p class="sim-hint muted" id="sim-hint">A guided journey: pick a place to visit, or step between places with <kbd>+</kbd>/<kbd>&minus;</kbd>, the arrow keys or the scroll wheel. Hover or click anything for its size and source. Below an atom, quarks and electrons have no measured size: they are drawn as markers.</p>
+      </section>
+
+      <section class="card controls-card" aria-labelledby="readouts-heading">
+        <h2 id="readouts-heading" class="visually-hidden">Readouts</h2>
+        <div class="controls-grid">
+          <div class="controls-col">
+            <h3 class="readouts-title">Readouts</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>1 screen pixel now =</dt>
+                <dd><b data-out="pxIs">–</b></dd>
+                <dd class="sub" data-out="pxSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Magnification</dt>
+                <dd><b data-out="mag">–</b></dd>
+                <dd class="sub" data-out="magSub">–</dd>
+              </div>
+              <div class="readout">
+                <dt>Your screen's width spans</dt>
+                <dd><b data-out="span">–</b></dd>
+                <dd class="sub" data-out="spanSub">–</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="controls-col">
+            <h3 class="readouts-title">Atoms across this pixel</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt>At true size (1:1), one pixel spans</dt>
+                <dd><b data-out="atoms1">–</b> silicon atoms</dd>
+                <dd class="sub" data-out="atoms1Sub">–</dd>
+              </div>
+              <div class="readout readout--wide">
+                <dt>At this zoom</dt>
+                <dd><b data-out="atomsNow">–</b></dd>
+                <dd class="sub" data-out="atomsNowSub">–</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="controls-col">
+            <h3 class="readouts-title">Nearest place</h3>
+            <dl class="readouts" aria-live="off">
+              <div class="readout readout--wide">
+                <dt data-out="nearName">–</dt>
+                <dd><b data-out="nearSize">–</b></dd>
+                <dd class="sub" data-out="nearSub">–</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+        <p id="sr-summary" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <section class="card maths-card" aria-labelledby="maths-heading">
+      <h2 id="maths-heading" class="card-title">The maths</h2>
+      <p class="muted maths-intro">One number sets the whole picture: how many metres one screen pixel covers. Your current values plugged in.</p>
+      <ol class="equations">
+        <li>
+          <span class="eq">pixel size = 1 / (pixels per metre)</span>
+          <span class="eq-note" data-eq="pitch">–</span>
+        </li>
+        <li>
+          <span class="eq">magnification = pixel size / metres per pixel</span>
+          <span class="eq-note" data-eq="mag">–</span>
+        </li>
+        <li>
+          <span class="eq">size on screen (px) = size / metres per pixel</span>
+          <span class="eq-note" data-eq="size">–</span>
+        </li>
+        <li>
+          <span class="eq">atoms across = L &times; 2 / a<sub>Si</sub></span>
+          <span class="eq-note" data-eq="atoms">–</span>
+        </li>
+        <li>
+          <span class="eq">log<sub>10</sub>(m per px) = log<sub>A</sub> + f (log<sub>B</sub> &minus; log<sub>A</sub>)</span>
+          <span class="eq-note" data-eq="rail">–</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="card pixel-card" id="pixel-card"></section>
+
+    <section class="explainer" aria-labelledby="explainer-heading">
+      <article class="prose">
+        <h2 id="explainer-heading">The pixel at the small end of the scale</h2>
+
+        <h3>Start with one real pixel</h3>
+        <p>On a calibrated screen the journey starts at true size: one pixel, about <span data-calc="pitchMm">0.277</span>&nbsp;mm across on a 24-inch 1080p monitor. A typical human hair, <span data-calc="hairUm">70</span>&nbsp;&micro;m thick, is about <span data-calc="hairRatio">4</span> times thinner. Each step down then magnifies the view, until one pixel covers less than the width of an atom, and finally less than a proton.</p>
+
+        <h3>Atoms across this pixel</h3>
+        <p>In a silicon crystal the atoms sit on average <span data-calc="siSpacing">272</span>&nbsp;pm apart along any line (half the measured lattice parameter, <span data-calc="siA">543.1</span>&nbsp;pm, because each cubic cell holds 8 atoms). So a row of about <span data-calc="atoms24">1.02 million</span> silicon atoms would span one pixel of a 24-inch 1080p screen. The readout uses your own screen. As you zoom in, the count falls, until one silicon atom spans many pixels.</p>
+
+        <h3>Below an atom: sizes become limits</h3>
+        <p>The gold atom is drawn <span data-calc="auAtom">452 pm</span> across, the size of its electron cloud (where the density falls to 0.001 electrons per cubic bohr). Its nucleus is <span data-calc="auNuc">10.9 fm</span> across, about <span data-calc="auRatio">41,600</span> times smaller, and a proton is <span data-calc="proton">1.68 fm</span>. Electrons and quarks are different: no experiment has measured any size for them. They may be true points. All we have are upper limits: an electron's radius is under <span data-calc="eLimit">2.8 × 10<sup>−19</sup></span>&nbsp;m and a quark's under <span data-calc="qLimit">4.3 × 10<sup>−19</sup></span>&nbsp;m, so the last stop shows a circle that a quark, if it has any size at all, must fit inside.</p>
+
+        <h3>The pixel at both ends</h3>
+        <p>This journey covers about <span data-calc="decades">17</span> powers of ten below one pixel. The <a href="solar.html#milkyway">space page</a> runs the other way: from the same pixel up until the whole Milky Way, 100,000 light-years across, fits inside one. Your pixel is about <span data-calc="belowDec">15</span> powers of ten bigger than the quark-size limit, and about <span data-calc="aboveDec">25</span> powers of ten smaller than the Milky Way.</p>
+
+        <h3>What is approximate</h3>
+        <p>Living things vary: the hair, blood cell, bacterium and virus are typical sizes from the cited ranges, and their shapes are simple outlines. The virus is SARS-CoV-2, drawn at the middle of its measured range. The atom and nucleus have no sharp edge, so the drawn edges are definitions (a density contour, and twice the rms charge radius). The objects are lined up side by side for comparison; only the gold nucleus is placed where it really is, at the centre of its atom. The electron and quark markers show where to look, not a size.</p>
+      </article>
+
+      <div class="explainer-side">
+        <aside class="ad-slot ad-slot--rect" data-ad-slot="rectangle" aria-label="Advertisement">
+          <span class="ad-label">Advertisement</span>
+          <div class="ad-box"></div>
+        </aside>
+
+        <section class="card affiliate" data-affiliate aria-labelledby="learn-more-heading" hidden>
+          <h2 id="learn-more-heading" class="card-title">Learn more</h2>
+          <p class="muted small">Microscopes and books on the very small. Some links may be affiliate links; they never change what we recommend.</p>
+          <ul class="affiliate-list">
+            <!-- Template:
+            <li><a href="https://..." rel="sponsored noopener">Book or kit name</a><span class="muted small">One-line why it helps</span></li>
+            -->
+            <li class="affiliate-placeholder">Affiliate link slot: student microscope</li>
+            <li class="affiliate-placeholder">Affiliate link slot: powers-of-ten book</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <section class="card data-credits" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card-title">Sources</h2>
+      <ul class="small">
+        <li>Human hair and red blood cell: sources in <code>js/data/references.js</code> (Ley 1999, The Physics Factbook; Bandaru &amp; Killeen, StatPearls, NCBI Bookshelf NBK562141).</li>
+        <li>E. coli: R. Milo &amp; R. Phillips, Cell Biology by the Numbers, <a href="http://book.bionumbers.org/how-big-is-an-e-coli-cell-and-what-is-its-mass/">"How big is an E. coli cell and what is its mass?"</a> (BNID 101788).</li>
+        <li>Virus: N. Zhu et al., "A Novel Coronavirus from Patients with Pneumonia in China, 2019", <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7092803/">N. Engl. J. Med. 382, 727 (2020)</a>.</li>
+        <li>DNA: Lehninger, Principles of Biochemistry 3rd ed., via BioNumbers <a href="https://bionumbers.hms.harvard.edu/bionumber.aspx?id=100666">BNID 100666</a> (width) and <a href="https://bionumbers.hms.harvard.edu/bionumber.aspx?id=100669">100669</a> (turn); rise per base pair <a href="https://bionumbers.hms.harvard.edu/bionumber.aspx?id=100667">BNID 100667</a>.</li>
+        <li>Gold atom: M. Rahm, R. Hoffmann &amp; N. W. Ashcroft, <a href="https://doi.org/10.1002/chem.201602949">Chem. Eur. J. 22, 14625 (2016)</a> and its <a href="https://doi.org/10.1002/chem.201700610">2017 corrigendum</a>, via the <a href="https://github.com/lmmentel/mendeleev">mendeleev</a> element database. Gold-197 nucleus: I. Angeli &amp; K. P. Marinova, At. Data Nucl. Data Tables 99, 69 (2013), via the <a href="https://www-nds.iaea.org/radii/">IAEA charge radii table</a>.</li>
+        <li>Proton charge radius and silicon lattice parameter: <a href="https://physics.nist.gov/cuu/Constants/">CODATA 2022 recommended values</a> (NIST).</li>
+        <li>Quark-size limit: ZEUS Collaboration, Phys. Lett. B 757, 468 (2016), <a href="https://arxiv.org/abs/1604.01280">arXiv:1604.01280</a>. Electron-size limit: D. Bourilkov, Phys. Rev. D 62, 076005 (2000), <a href="https://arxiv.org/abs/hep-ph/0002172">arXiv:hep-ph/0002172</a>.</li>
+        <li>Pixel size: your calibration; 24-inch 1920 &times; 1080 screen assumed when unknown.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; Real-Scale Physics. No cookies, no tracking.</p>
+      <ul class="nav-list">
+        <li><a href="./">Simulations</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a class="support-link" data-donate href="#">Support this site</a></li>
+      </ul>
+    </div>
+  </footer>
+  <noscript><p class="noscript">This simulator needs JavaScript to run.</p></noscript>
+</body>
+</html>

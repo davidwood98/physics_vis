@@ -71,6 +71,9 @@ export function timeScaleLabel(ts, trueScale = true) {
  * @param {(view) => void} [opts.onResize]
  * @param {(scale) => void} [opts.onScaleChange]
  * @param {boolean} [opts.startPaused]                         wait for Play (run-based sims)
+ * @param {boolean} [opts.animated=true]                       false for static pages (nothing moves): no
+ *                                                             play state, Space does nothing, and the loop
+ *                                                             only redraws after requestDraw()
  * @param {boolean} [opts.calibration=true]                    false for scaled (non-1:1) tools:
  *                                                             no calibration dialog or scale badge
  * @param {() => void} [opts.beforePlay]                       e.g. restart a finished run
@@ -93,13 +96,14 @@ export function createSim(opts) {
   };
 
   const useCalibration = opts.calibration !== false;
+  const animated = opts.animated !== false;
   let dirty = true;
   let rafId = 0;
   let lastFrameTime = null;
   const recentDts = []; // for estimating the screen refresh rate
 
   const sim = {
-    paused: Boolean(opts.startPaused) || prefersReducedMotion(),
+    paused: !animated || Boolean(opts.startPaused) || prefersReducedMotion(),
     timeScale: 1,
     scale: getScale(), // { cssPxPerMetre, calibrated }
     colors: {},
@@ -120,6 +124,7 @@ export function createSim(opts) {
     requestDraw() { dirty = true; },
 
     setPaused(paused) {
+      if (!animated) return; // static page: there is nothing to play
       if (!paused && sim.paused) opts.beforePlay?.();
       sim.paused = paused;
       updatePlayUI();
@@ -239,7 +244,7 @@ export function createSim(opts) {
     dom.play?.addEventListener('click', () => sim.setPaused(!sim.paused));
     // Space toggles pause, except where Space already means something (buttons, fields).
     document.addEventListener('keydown', (e) => {
-      if (e.code !== 'Space' || e.repeat || e.defaultPrevented || isTypingTarget(e.target)) return;
+      if (!animated || e.code !== 'Space' || e.repeat || e.defaultPrevented || isTypingTarget(e.target)) return;
       e.preventDefault();
       sim.setPaused(!sim.paused);
     });
@@ -269,7 +274,7 @@ export function createSim(opts) {
 
     updateScaleBadge();
     updatePlayUI();
-    if (prefersReducedMotion() && dom.hint) {
+    if (animated && prefersReducedMotion() && dom.hint) {
       dom.hint.innerHTML =
         'Paused because your device asks for reduced motion. Press <strong>Play</strong> (or <kbd>Space</kbd>) to start.';
     }
@@ -278,7 +283,8 @@ export function createSim(opts) {
 
     // Console hook for checks: add ?debug=1 to the URL, then use window.__sim.
     if (new URLSearchParams(location.search).has('debug')) {
-      window.__sim = Object.assign({ sim }, opts.debug);
+      // Copy property descriptors, not values, so getters in opts.debug stay live.
+      window.__sim = Object.defineProperties({ sim }, Object.getOwnPropertyDescriptors(opts.debug ?? {}));
     }
   }
 

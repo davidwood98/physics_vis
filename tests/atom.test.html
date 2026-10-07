@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>atomic-model.js tests (atom page)</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; }
+    .pass { color: #14603a; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>atomic-model.js tests (atom page)</h1>
+  <p>Open the console for details. Serve the site root (python -m http.server) and visit /tests/atom.test.html.</p>
+  <p id="summary">Running…</p>
+  <ol id="results"></ol>
+
+  <script type="module">
+    import * as M from '../js/atomic-model.js';
+    import { CODATA, PDG_QUARKS, LIMITS, LATTICES, ATOM_RADII_ANGSTROM, NUCLEI, SYMBOLS, NAMES } from '../js/data/atomic-data.js';
+
+    let passed = 0;
+    let failed = 0;
+    const list = document.getElementById('results');
+
+    function check(name, condition) {
+      console.assert(condition, name);
+      condition ? passed++ : failed++;
+      const li = document.createElement('li');
+      li.className = condition ? 'pass' : 'fail';
+      li.textContent = `${condition ? 'PASS' : 'FAIL'}  ${name}`;
+      list.append(li);
+    }
+    const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps * Math.max(1, Math.abs(a), Math.abs(b));
+    const rel = (a, b, r) => Math.abs(a / b - 1) <= r;
+
+    const H = M.elementBySymbol('H');
+    const He = M.elementBySymbol('He');
+    const Au = M.elementBySymbol('Au');
+    const U = M.elementBySymbol('U');
+    const Cu = M.elementBySymbol('Cu');
+    const Si = M.elementBySymbol('Si');
+    const P = M.DEFAULT_PITCH;
+
+    // --- data file: values as fetched (CODATA 2022, PDG 2025, limits, lattices) ---
+    check('CODATA 2022 Bohr radius 5.29177210544e-11 m', CODATA.bohrRadius === 5.29177210544e-11);
+    check('CODATA 2022 proton rms charge radius 0.84075 fm', CODATA.protonRadius === 8.4075e-16);
+    check('CODATA 2022 proton mass 938.27208943 MeV', CODATA.protonMassMeV === 938.27208943);
+    check('CODATA electron mass in u 5.485799090441e-4', CODATA.electronMassU === 5.485799090441e-4);
+    check('CODATA proton/electron mass in kg give the mass ratio 1836.15', rel(CODATA.protonMass / CODATA.electronMass, 1836.152673426, 1e-9));
+    check('CODATA silicon lattice parameter 543.1020511 pm', CODATA.siliconLattice === 5.431020511e-10);
+    check('PDG: m_u = 2.16 MeV, m_d = 4.70 MeV', PDG_QUARKS.upMeV === 2.16 && PDG_QUARKS.downMeV === 4.7);
+    check('ZEUS 2016 quark radius limit 0.43e-16 cm = 4.3e-19 m', near(LIMITS.quarkRadius, 4.3e-19));
+    check('LEP electron radius limit 2.8e-19 m', near(LIMITS.electronRadius, 2.8e-19));
+    check('lattice constants: Cu 361.496 pm, Au 407.825 pm (fcc), Si diamond', LATTICES.Cu.a === 3.61496e-10 && LATTICES.Au.a === 4.07825e-10 && LATTICES.Si.structure === 'diamond');
+    check('96 free-atom radii, 96 symbols and names', ATOM_RADII_ANGSTROM.length === 96 && SYMBOLS.length === 96 && NAMES.length === 96);
+    check('radii plausible: every value between 1.3 and 3.0 Å', ATOM_RADII_ANGSTROM.every((r) => r >= 1.3 && r <= 3.0));
+    check('83 elements with radius, nuclear radius and mass', M.ELEMENTS.length === 83 && NUCLEI.length === 83);
+    check('every element: Z ascending, A ≥ Z, mass within 1 u of A', M.ELEMENTS.every((e, i, a) => (i === 0 || e.z > a[i - 1].z) && e.A >= e.z && Math.abs(e.massU - e.A) < 1));
+    check('gold: Au-197, rms 5.4371 fm, 196.96656879 u, abundance 1', Au.A === 197 && near(Au.nucleusRadius, 5.4371e-15) && Au.massU === 196.96656879 && Au.abundance === 1);
+    check('hydrogen-1 uses the CODATA proton radius, not the 2013 table', H.A === 1 && near(H.nucleusRadius, CODATA.protonRadius));
+    check('uranium: U-238, rms 5.8571 fm', U.A === 238 && near(U.nucleusRadius, 5.8571e-15));
+    check('free-atom radii: H 154 pm, Au 226 pm', near(H.atomRadius, 1.54e-10) && near(Au.atomRadius, 2.26e-10));
+
+    // --- owner's figures, checked against the cited data ---
+    check('1 cm ≈ 36 pixels on a 24″ 1080p screen (36.14)', Math.round(0.01 / P) === 36 && near(0.01 / P, 36.137, 1e-4));
+    check('pixel pitch on a 24″ 1080p screen ≈ 0.277 mm', near(P, 2.7673e-4, 1e-4));
+    check('H atom = 1 cm: magnified ≈ 32 million times', near(M.magnification(M.atomDiameter(H)), 3.2468e7, 1e-4));
+    check('H nucleus at atom = 1 cm ≈ 0.055 µm (density edge)', near(M.nucleusAtAtomScale(H), 5.459e-8, 1e-3));
+    check("owner's 0.16 µm holds only with the Bohr diameter: 0.159 µm", near(M.PROTON_DIAMETER * 0.01 / (2 * M.BOHR_RADIUS), 1.589e-7, 1e-3));
+    check('Au nucleus at atom = 1 cm ≈ 0.24 µm (owner said 0.5)', near(M.nucleusAtAtomScale(Au), 2.4058e-7, 1e-3));
+    check('Au nucleus ≈ 1/1,150 of a 24″ 1080p pixel', M.pixelFraction(M.nucleusAtAtomScale(Au) / P) === 'about 1/1,150 of a pixel');
+    const range = M.atomRadiusRange();
+    check('smallest free atom helium (134 pm), largest barium (293 pm)', range.min.z === 2 && range.max.z === 56);
+    check('atom size range ≈ ×2.2 across Z = 1-96 (owner said about ×5)', near(range.ratio, 2.1866, 1e-3));
+    check('barium is the largest of the picker elements, helium the smallest',
+      M.ELEMENTS.reduce((a, e) => (e.atomRadius > a.atomRadius ? e : a)).symbol === 'Ba' && M.ELEMENTS.reduce((a, e) => (e.atomRadius < a.atomRadius ? e : a)).symbol === 'He');
+    const fr = M.ELEMENTS.map(M.nuclearVolumeFraction);
+    check('nuclear volume share: from 1 part in 6.1e15 (H) to 1 in 7.2e13 (Au)', near(1 / Math.min(...fr), 6.146e15, 2e-3) && near(1 / Math.max(...fr), 7.18e13, 2e-3));
+    check('volume share of gold nucleus = (5.4371 / 226 000)³', near(M.nuclearVolumeFraction(Au), (5.4371e-15 / 2.26e-10) ** 3));
+    check('proton = 1 cm: magnified ≈ 5.9 trillion times', near(M.magnification(M.PROTON_DIAMETER), 5.947e12, 1e-3));
+    check('proton = 1 cm: hydrogen atom 1.83 km across (density edge)', near(M.atProtonScale(M.atomDiameter(H)), 1831.7, 1e-3));
+    check("owner's 630 m holds for the Bohr diameter: 629 m", near(M.atProtonScale(2 * M.BOHR_RADIUS), 629.41, 1e-4));
+    check('proton = 1 cm: gold atom 2.69 km across (owner said 1.7 km)', near(M.atProtonScale(M.atomDiameter(Au)), 2688.1, 1e-3));
+    check('quark limit on a 1 cm proton: under 5.1 µm (owner: under about 6 µm)', near(M.atProtonScale(M.QUARK_LIMIT_DIAMETER), 5.1145e-6, 1e-3) && M.atProtonScale(M.QUARK_LIMIT_DIAMETER) < 6e-6);
+    check('quark limit on a 1 cm proton: under 0.02 px (0.0185)', M.atProtonScale(M.QUARK_LIMIT_DIAMETER) / P < 0.02 && near(M.atProtonScale(M.QUARK_LIMIT_DIAMETER) / P, 0.01848, 1e-3));
+    check('electron limit on a 1 cm proton: under 3.3 µm', near(M.atProtonScale(M.ELECTRON_LIMIT_DIAMETER), 3.330e-6, 1e-3));
+    check('valence quarks 2 × 2.16 + 4.70 = 9.02 MeV', near(M.valenceQuarkMassMeV(), 9.02));
+    check('valence quarks are 0.96% of the proton mass (about 1%)', near(M.valenceMassFraction(), 0.0096134, 1e-4));
+
+    // --- mass share ---
+    check('hydrogen: 99.946% of the mass in the nucleus', near(M.nucleusMassShare(H), 0.9994557, 1e-6));
+    check('gold: 99.978% of the mass in the nucleus', near(M.nucleusMassShare(Au), 0.99978, 1e-5));
+    check('every element: over 99.9% of the mass in the nucleus', M.ELEMENTS.every((e) => M.nucleusMassShare(e) > 0.999));
+
+    // --- hydrogen 1s ---
+    const rEdge = M.hydrogenRadiusAtDensity(0.001);
+    check('exact 1s density falls to 0.001 e/bohr³ at 152 pm (Rahm: 154 pm)', near(rEdge, 1.5248e-10, 1e-4));
+    check('density at that radius is 0.001 e/bohr³', near(M.hydrogen1sDensityPerBohr3(rEdge), 0.001, 1e-9));
+    check('93% of the 1s electron lies inside it (92.66%)', near(M.hydrogenFractionInside(rEdge), 0.92658, 1e-4));
+    check('1s: 32% inside the Bohr radius', near(M.hydrogenFractionInside(M.BOHR_RADIUS), 1 - 5 * Math.exp(-2)));
+    check('1s density integrates to 1 electron', (() => {
+      let s = 0;
+      const dr = M.BOHR_RADIUS / 2000;
+      for (let r = dr / 2; r < 40 * M.BOHR_RADIUS; r += dr) s += 4 * Math.PI * r * r * M.hydrogen1sDensity(r) * dr;
+      return near(s, 1, 1e-5);
+    })());
+    check('drawn cloud is the exact 1s shape for hydrogen', [0, 0.3, 1, 2.5].every((x) => near(M.cloudRelativeDensity(x * H.atomRadius, H.atomRadius), M.hydrogenRelativeDensity(x * H.atomRadius))));
+    check('cloud brightness at the edge ≈ 0.13 of the centre, fading beyond', near(M.cloudBrightness(M.cloudRelativeDensity(1, 1)), Math.exp(-2 / M.HYDROGEN_SHAPE) ** 0.35) && M.cloudBrightness(M.cloudRelativeDensity(1.5, 1)) < M.cloudBrightness(M.cloudRelativeDensity(1, 1)));
+
+    // --- solids ---
+    check('copper nearest neighbours a/√2 = 255.6 pm', near(M.nearestNeighbour(LATTICES.Cu), 2.5562e-10, 1e-4));
+    check('gold nearest neighbours 288.4 pm', near(M.nearestNeighbour(LATTICES.Au), 2.8838e-10, 1e-4));
+    check('silicon bond a√3/4 = 235.2 pm', near(M.nearestNeighbour(LATTICES.Si), 2.3517e-10, 1e-4));
+    check('silicon: atoms per metre along a line = 2/a', near(M.atomsPerMetre(LATTICES.Si), 2 / LATTICES.Si.a));
+    check('copper at atom = 1 cm: neighbours 5.9 mm apart', near(M.atAtomScale(Cu, M.nearestNeighbour(LATTICES.Cu)), 5.890e-3, 1e-3));
+    {
+      const chain = M.neighbourChain(LATTICES.Si, 7);
+      const d = chain.slice(1).map((p, i) => Math.hypot(p.x - chain[i].x, p.y - chain[i].y));
+      check('silicon zig-zag chain: every bond is a√3/4', d.every((x) => near(x, M.nearestNeighbour(LATTICES.Si), 1e-12)));
+      const c2 = M.neighbourChain(LATTICES.Cu, 5);
+      check('fcc chain: straight row at a/√2, centred', c2.every((p) => p.y === 0) && near(c2[1].x - c2[0].x, M.nearestNeighbour(LATTICES.Cu)) && near(c2[2].x, 0, 1e-20));
+    }
+    check('solid view only for Cu, Si, Au', M.ELEMENTS.filter((e) => e.lattice).map((e) => e.symbol).join() === 'Si,Cu,Au');
+    check('free Cu atom (434 pm) is wider than its spacing in the metal (256 pm)', M.atomDiameter(Cu) > M.nearestNeighbour(LATTICES.Cu));
+
+    // --- zoom cascade ---
+    {
+      const k = 0.01 / P; // CSS px per cm at dpr 1
+      const mH = M.cascadeMagnifications(M.nucleusDiameter(H) * k / M.atomDiameter(H), 220);
+      const mAu = M.cascadeMagnifications(M.nucleusDiameter(Au) * k / M.atomDiameter(Au), 220);
+      check('cascade for hydrogen: ×100, ×10,000, ×500,000', mH.join() === '100,10000,500000');
+      check('cascade for gold: ×100, ×10,000, ×100,000', mAu.join() === '100,10000,100000');
+      const lastPx = (el, m) => (M.nucleusDiameter(el) * k / M.atomDiameter(el)) * m[m.length - 1];
+      check('last inset: nucleus between 25% and 60% of the box', [[H, mH], [Au, mAu]].every(([el, m]) => lastPx(el, m) > 0.25 * 220 && lastPx(el, m) < 0.6 * 220));
+    }
+    check('r₀ fit of A^(1/3) over all nuclei ≈ 0.98 fm', near(M.fitR0(M.ELEMENTS), 0.98e-15, 0.02));
+
+    // --- formatting ---
+    check('formatLength: 452 pm, 0.86 am, 1.83 km, 10.9 fm, 0.241 µm',
+      M.formatLength(4.52e-10) === '452 pm' && M.formatLength(8.6e-19) === '0.86 am' && M.formatLength(1831.7) === '1.83 km' &&
+      M.formatLength(1.08742e-14) === '10.9 fm' && M.formatLength(2.4058e-7) === '241 nm');
+    check('formatLength picks the unit at exact powers: 1 µm, 1 nm', M.formatLength(1e-6) === '1 µm' && M.formatLength(1e-9) === '1 nm');
+    check('magnificationText: ×2,600 and ×2.6 × 10⁹', M.magnificationText(2600) === '×2,600' && M.magnificationText(2.6e9) === '×2.6 × 10⁹');
+    check('pixelFraction: 2.4 pixels, about 1/50 of a pixel', M.pixelFraction(2.4) === '2.4 pixels' && M.pixelFraction(0.02) === 'about 1/50 of a pixel');
+    check('ratioWords: 32 million, 5.9 trillion', M.ratioWords(3.2468e7) === '32 million' && M.ratioWords(5.947e12) === '5.9 trillion');
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passed} passed, ${failed} failed`;
+    summary.className = failed ? 'fail' : 'pass';
+    console.log(`atom tests: ${passed} passed, ${failed} failed`);
+  </script>
+</body>
+</html>
